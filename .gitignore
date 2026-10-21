@@ -1,0 +1,21 @@
+# Dependencies and build output
+node_modules
+dist
+coverage
+*.tsbuildinfo
+
+# Generated Prisma Client (recreated by `npm install` / `npm run db:generate`)
+/src/generated/prisma
+
+# Environment files: keep secrets out of version control
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
+*.log
