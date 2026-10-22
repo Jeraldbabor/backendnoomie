@@ -1,5 +1,6 @@
 // Development seed data, mirroring the Noomie app's local preview recipes.
 // Run with `npm run db:seed`. Skips seeding when recipes already exist.
+// These are Noomie editorial recipes: no author, so no user can edit them through the API.
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.js';

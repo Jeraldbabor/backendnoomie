@@ -9,6 +9,13 @@ REST API for the Noomie app.
 - Validation with `class-validator`, Swagger docs, Helmet, rate limiting, URI versioning
 - Vitest unit and e2e tests, oxlint, Prettier
 
+**Frontend developers:** start with the [API guide in `docs/`](docs/README.md). It covers
+running the backend with Docker, every endpoint, errors, and how API changes are announced.
+
+**Backend developers:** every API change updates `docs/` in the same change (see
+[keeping the docs correct](docs/README.md#keeping-these-docs-correct)). `npm run docs:check`
+and the **Docs** GitHub workflow enforce it.
+
 ## Project structure
 
 ```
@@ -81,18 +88,27 @@ dependencies only.
 
 ## Endpoints
 
-| Method | Path                    | Description                                       |
-| ------ | ----------------------- | ------------------------------------------------- |
-| GET    | `/api/health`           | Liveness and database connectivity                |
-| POST   | `/api/v1/auth/register` | Create an account and sign in                     |
-| POST   | `/api/v1/auth/login`    | Sign in with email and password                   |
-| GET    | `/api/v1/auth/me`       | Current user (bearer token)                       |
-| POST   | `/api/v1/auth/logout`   | Revoke the current session (bearer token)         |
-| GET    | `/api/v1/recipes`       | List recipes (`?search=&cuisine=&limit=&cursor=`) |
-| GET    | `/api/v1/recipes/:id`   | Get one recipe                                    |
-| POST   | `/api/v1/recipes`       | Create a recipe                                   |
-| PATCH  | `/api/v1/recipes/:id`   | Update a recipe                                   |
-| DELETE | `/api/v1/recipes/:id`   | Delete a recipe                                   |
+| Method | Path                    | Access      | Description                                       |
+| ------ | ----------------------- | ----------- | ------------------------------------------------- |
+| GET    | `/api/health`           | Public      | Liveness and database connectivity                |
+| POST   | `/api/v1/auth/register` | Public      | Create an account and sign in                     |
+| POST   | `/api/v1/auth/login`    | Public      | Sign in with email and password                   |
+| GET    | `/api/v1/auth/me`       | Signed in   | Current user                                      |
+| POST   | `/api/v1/auth/logout`   | Signed in   | Revoke the current session                        |
+| GET    | `/api/v1/recipes`       | Public      | List recipes (`?search=&cuisine=&limit=&cursor=`) |
+| GET    | `/api/v1/recipes/:id`   | Public      | Get one recipe                                    |
+| POST   | `/api/v1/recipes`       | Signed in   | Create a recipe; you become its author            |
+| PATCH  | `/api/v1/recipes/:id`   | Author only | Update your recipe                                |
+| DELETE | `/api/v1/recipes/:id`   | Author only | Delete your recipe                                |
+
+"Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
+session. "Author only" routes also answer **403** when the recipe belongs to someone else.
+
+Recipes include `author: { id, displayName } | null`. The author is set from the signed-in
+user when the recipe is created and never changes; sending `authorId` is rejected (400).
+`null` marks a Noomie editorial recipe (the seed data), which nobody can edit through the
+API. An author's email never appears in recipe responses. A user who still has recipes
+cannot be deleted (foreign key `RESTRICT`) until an attribution policy is decided.
 
 Lists use cursor pagination. The response is `{ data, nextCursor }`. Pass `nextCursor`
 back as `?cursor=` to get the next page; `null` means the last page. `limit` is 1–50
@@ -114,8 +130,9 @@ and route; everything else allows 120.
 To protect a route in another feature, import `AuthModule`, add
 `@UseGuards(SessionAuthGuard)`, and read the user with `@CurrentAuth()`.
 
-> **Recipe writes are still open.** Guard them with `SessionAuthGuard` and add an
-> author taken from `@CurrentAuth()`, never from the request body, before deploying.
+`features/recipes` is the reference: guard the write routes, pass `auth.user.id` to the
+service, and check ownership in the service before changing anything.
+
 > Behind a reverse proxy, enable Express `trust proxy` so rate limits see client IPs.
 
 ## Working with the database
@@ -152,6 +169,7 @@ Then add the models to `schema.prisma`, run a migration, and register the module
 | `npm run start:prod` | Run the compiled build                                     |
 | `npm test`           | Unit tests (`src/**/*.spec.ts`)                            |
 | `npm run test:e2e`   | e2e tests against the database in `DATABASE_URL`           |
+| `npm run docs:check` | Checks `docs/` covers every route and all links resolve    |
 | `npm run lint`       | oxlint (type-aware)                                        |
 | `npm run format`     | Prettier                                                   |
 | `npm run db:*`       | Prisma generate / migrate / deploy / seed / reset / studio |
