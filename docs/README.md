@@ -12,6 +12,7 @@ read the backend code. Examples are based on real API responses.
 | Understand errors, paging, limits, and field rules | [API conventions](api/conventions.md)                   |
 | Sign users up, in, and out                         | [Authentication](api/authentication.md)                 |
 | Show, create, edit, or delete recipes              | [Recipes](api/recipes.md)                               |
+| Show a user's profile, or let users edit their own | [Profiles](api/profiles.md)                             |
 | Call the API from the Noomie app's code            | [Noomie app integration](app-integration/noomie-app.md) |
 | Ask for a new endpoint, or report a bug            | [Working together](team/working-together.md)            |
 | See what changed in the API                        | [Changelog](CHANGELOG.md)                               |
@@ -31,6 +32,7 @@ docs/
 │   ├── conventions.md        rules shared by every endpoint
 │   ├── authentication.md
 │   ├── recipes.md
+│   ├── profiles.md
 │   └── _template.md          template for documenting a new feature
 ├── app-integration/          how the Noomie app's code should call the API
 │   └── noomie-app.md
@@ -45,18 +47,21 @@ docs/
 
 ## All endpoints
 
-| Method | Path                    | Who         | Reference                                      |
-| ------ | ----------------------- | ----------- | ---------------------------------------------- |
-| GET    | `/api/health`           | Anyone      | [Conventions](api/conventions.md#health-check) |
-| POST   | `/api/v1/auth/register` | Anyone      | [Authentication](api/authentication.md)        |
-| POST   | `/api/v1/auth/login`    | Anyone      | [Authentication](api/authentication.md)        |
-| GET    | `/api/v1/auth/me`       | Signed in   | [Authentication](api/authentication.md)        |
-| POST   | `/api/v1/auth/logout`   | Signed in   | [Authentication](api/authentication.md)        |
-| GET    | `/api/v1/recipes`       | Anyone      | [Recipes](api/recipes.md)                      |
-| GET    | `/api/v1/recipes/:id`   | Anyone      | [Recipes](api/recipes.md)                      |
-| POST   | `/api/v1/recipes`       | Signed in   | [Recipes](api/recipes.md)                      |
-| PATCH  | `/api/v1/recipes/:id`   | Author only | [Recipes](api/recipes.md)                      |
-| DELETE | `/api/v1/recipes/:id`   | Author only | [Recipes](api/recipes.md)                      |
+| Method | Path                       | Who         | Reference                                      |
+| ------ | -------------------------- | ----------- | ---------------------------------------------- |
+| GET    | `/api/health`              | Anyone      | [Conventions](api/conventions.md#health-check) |
+| POST   | `/api/v1/auth/register`    | Anyone      | [Authentication](api/authentication.md)        |
+| POST   | `/api/v1/auth/login`       | Anyone      | [Authentication](api/authentication.md)        |
+| GET    | `/api/v1/auth/me`          | Signed in   | [Authentication](api/authentication.md)        |
+| POST   | `/api/v1/auth/logout`      | Signed in   | [Authentication](api/authentication.md)        |
+| GET    | `/api/v1/recipes`          | Anyone      | [Recipes](api/recipes.md)                      |
+| GET    | `/api/v1/recipes/:id`      | Anyone      | [Recipes](api/recipes.md)                      |
+| POST   | `/api/v1/recipes`          | Signed in   | [Recipes](api/recipes.md)                      |
+| PATCH  | `/api/v1/recipes/:id`      | Author only | [Recipes](api/recipes.md)                      |
+| DELETE | `/api/v1/recipes/:id`      | Author only | [Recipes](api/recipes.md)                      |
+| GET    | `/api/v1/profiles/:userId` | Anyone      | [Profiles](api/profiles.md)                    |
+| GET    | `/api/v1/profiles/me`      | Signed in   | [Profiles](api/profiles.md)                    |
+| PATCH  | `/api/v1/profiles/me`      | Signed in   | [Profiles](api/profiles.md)                    |
 
 Locally the API runs at `http://localhost:3000`.
 

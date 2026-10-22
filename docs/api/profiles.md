@@ -1,0 +1,90 @@
+# Profiles
+
+A profile is the public side of a user: name, bio, when they joined, and how many recipes
+they've written. Anyone can view a profile. Users can only edit their own, through
+`/profiles/me`.
+
+Private account data (email) is never part of a profile, not even your own; use
+[`GET /api/v1/auth/me`](authentication.md#current-user-get-apiv1authme-signed-in) for that.
+How to call these from the Noomie app: [app integration](../app-integration/noomie-app.md#profiles-in-the-app).
+
+## Endpoints
+
+| Method | Path                       | Who       | Success |
+| ------ | -------------------------- | --------- | ------- |
+| GET    | `/api/v1/profiles/:userId` | Anyone    | 200     |
+| GET    | `/api/v1/profiles/me`      | Signed in | 200     |
+| PATCH  | `/api/v1/profiles/me`      | Signed in | 200     |
+
+A user's recipes come from the recipe list: `GET /api/v1/recipes?authorId=<userId>`
+(see [recipes](recipes.md#list-recipes-get-apiv1recipes)).
+
+## The profile object
+
+```json
+{
+  "id": "01a1622f-0ed0-74d2-9289-641b2988172d",
+  "displayName": "Ada L.",
+  "bio": "Home cook. Mostly noodles.",
+  "createdAt": "2026-10-22T05:56:53.584Z",
+  "recipeCount": 1
+}
+```
+
+- `id` is the user's ID, the same as `author.id` on recipes and `user.id` from sign-in.
+- `bio` is `null` when the user hasn't written one.
+- `createdAt` is when the account was created ("member since").
+- `recipeCount` counts the recipes this user authored.
+- No profile photo yet; that needs image uploads, which don't exist yet.
+
+## View a profile: `GET /api/v1/profiles/:userId`
+
+No sign-in needed. Use it for the author link on a recipe: `recipe.author.id` is the `userId`.
+
+- **404** `Profile not found` if there is no such user.
+- **400** `Validation failed (uuid is expected)` if the ID isn't a valid UUID.
+
+## Your own profile: `GET /api/v1/profiles/me` (signed in)
+
+Returns **200** with your profile, in the same shape as above. **401** `Sign in to continue`
+without a valid session.
+
+## Edit your profile: `PATCH /api/v1/profiles/me` (signed in)
+
+Send only the fields you change:
+
+```json
+{ "displayName": "Ada L.", "bio": "Home cook. Mostly noodles." }
+```
+
+| Field         | Rule                                                     | Error message                        |
+| ------------- | -------------------------------------------------------- | ------------------------------------ |
+| `displayName` | If sent: 1–50 characters after trimming; can't be null   | `Enter your name`                    |
+| `bio`         | Up to 160 characters, trimmed; `""` or `null` removes it | `Bio must be at most 160 characters` |
+
+Returns **200** with the updated profile. The new name shows everywhere: on the profile, on
+the user's recipes (`author.displayName`), and in `GET /api/v1/auth/me`.
+
+You can't change your email, ID, or anything else here: other fields are rejected with
+**400** (`property email should not exist`). There is no way to edit another user's profile.
+
+## Errors
+
+| Status | When                                      | Message                                                           |
+| ------ | ----------------------------------------- | ----------------------------------------------------------------- |
+| 401    | `/me` routes without a valid session      | `Sign in to continue`                                             |
+| 404    | Unknown user ID                           | `Profile not found`                                               |
+| 400    | Invalid fields, extra fields, or a bad ID | List of field messages, or `Validation failed (uuid is expected)` |
+
+## Types
+
+```ts
+type Profile = {
+  id: string;
+  displayName: string;
+  bio: string | null;
+  createdAt: string;
+  recipeCount: number;
+};
+type ProfileUpdate = { displayName?: string; bio?: string | null };
+```

@@ -42,14 +42,16 @@ How to call these from the Noomie app: [app integration](../app-integration/noom
 
 ## List recipes: `GET /api/v1/recipes`
 
-| Query     | Meaning                                                           |
-| --------- | ----------------------------------------------------------------- |
-| `search`  | Words in the title or description (not case-sensitive), max 100   |
-| `cuisine` | Exact cuisine name, like `Mediterranean` (case-sensitive), max 60 |
-| `limit`   | Page size 1–50 (default 20)                                       |
-| `cursor`  | `nextCursor` from the previous page                               |
+| Query      | Meaning                                                           |
+| ---------- | ----------------------------------------------------------------- |
+| `search`   | Words in the title or description (not case-sensitive), max 100   |
+| `cuisine`  | Exact cuisine name, like `Mediterranean` (case-sensitive), max 60 |
+| `authorId` | Only recipes by this user (for a [profile](profiles.md) page)     |
+| `limit`    | Page size 1–50 (default 20)                                       |
+| `cursor`   | `nextCursor` from the previous page                               |
 
 Returns `{ data, nextCursor }`, newest first. See [paging](conventions.md#lists-and-paging).
+An `authorId` that isn't a UUID returns **400** `authorId must be a UUID`.
 
 ## Get one recipe: `GET /api/v1/recipes/:id`
 

@@ -25,13 +25,14 @@ export class RecipesService {
   }
 
   async findMany(query: ListRecipesQueryDto): Promise<CursorPage<RecipeView>> {
-    const { cursor, limit, search, cuisine } = query;
+    const { cursor, limit, search, cuisine, authorId } = query;
 
     // UUIDv7 ids are time-ordered, so `id < cursor` walks from newest to oldest
     // and stays stable while new recipes are inserted.
     const where: Prisma.RecipeWhereInput = {
       id: cursor ? { lt: cursor } : undefined,
       cuisine: cuisine || undefined,
+      authorId: authorId || undefined,
       OR: search
         ? [
             { title: { contains: search, mode: 'insensitive' } },

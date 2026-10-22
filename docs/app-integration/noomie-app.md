@@ -91,6 +91,7 @@ export const recipesApi = {
   list: (params: {
     search?: string;
     cuisine?: string;
+    authorId?: string;
     limit?: number;
     cursor?: string;
   }) => apiRequest<RecipePage>(`/recipes?${query(params)}`),
@@ -109,3 +110,28 @@ export const recipesApi = {
 ```
 
 Screens then call `recipesApi`, and handle loading, empty, error, and success states.
+
+## Profiles in the app
+
+The [profiles API](../api/profiles.md) fits the same pattern, in `src/features/profiles/api.ts`:
+
+```ts
+export const profilesApi = {
+  get: (userId: string) => apiRequest<Profile>(`/profiles/${userId}`),
+  getMine: (token: string) => apiRequest<Profile>('/profiles/me', { token }),
+  updateMine: (input: ProfileUpdate, token: string) =>
+    apiRequest<Profile>('/profiles/me', {
+      method: 'PATCH',
+      body: input,
+      token,
+    }),
+};
+```
+
+- **A user's recipes:** `recipesApi.list({ authorId: profile.id })`.
+- **Recipe author links:** `recipe.author.id` is the profile's `userId`. Editorial recipes
+  (`author: null`) have no profile to link to.
+- **After editing a profile,** the user stored by `SessionProvider` still has the old
+  `displayName` (the account panel shows it). Refresh it with `GET /api/v1/auth/me`, or
+  update the stored user from the `PATCH` response. That needs a small addition to the auth
+  feature, like the token helper above.

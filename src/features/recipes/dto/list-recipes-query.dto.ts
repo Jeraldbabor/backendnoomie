@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { CursorPaginationQueryDto } from '../../../common/dto/cursor-pagination-query.dto.js';
 import { Trim } from '../../../common/transforms/trim.transform.js';
 
@@ -16,4 +16,9 @@ export class ListRecipesQueryDto extends CursorPaginationQueryDto {
   @IsString()
   @MaxLength(60)
   cuisine?: string;
+
+  /** Only recipes by this user, for example on their profile. */
+  @IsOptional()
+  @IsUUID()
+  authorId?: string;
 }

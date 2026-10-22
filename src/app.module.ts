@@ -7,6 +7,7 @@ import { validateEnv } from './config/env.validation.js';
 import { PrismaModule } from './database/prisma.module.js';
 import { AuthModule } from './features/auth/auth.module.js';
 import { HealthModule } from './features/health/health.module.js';
+import { ProfilesModule } from './features/profiles/profiles.module.js';
 import { RecipesModule } from './features/recipes/recipes.module.js';
 
 @Module({
@@ -22,6 +23,7 @@ import { RecipesModule } from './features/recipes/recipes.module.js';
     // Feature modules
     AuthModule,
     HealthModule,
+    ProfilesModule,
     RecipesModule,
   ],
   providers: [

@@ -11,8 +11,8 @@ const recipe = (id: string): RecipeView => ({
   cuisine: 'Mediterranean',
   minutes: 20,
   ingredients: ['lemon'],
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+  updatedAt: new Date('2026-01-01T00:00:00Z'),
   author: { id: 'author-1', displayName: 'Ada' },
 });
 
@@ -86,6 +86,15 @@ describe('RecipesService', () => {
       const page = await service.findMany(query({ limit: 2 }));
 
       expect(page).toEqual({ data: [recipe('a')], nextCursor: null });
+    });
+
+    it('filters by author for profile pages', async () => {
+      prisma.recipe.findMany.mockResolvedValue([]);
+
+      await service.findMany(query({ authorId: 'author-1' }));
+
+      const { where } = prisma.recipe.findMany.mock.calls[0][0];
+      expect(where.authorId).toBe('author-1');
     });
 
     it('applies cursor, cuisine and search filters', async () => {

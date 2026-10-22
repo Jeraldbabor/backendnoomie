@@ -65,7 +65,9 @@ emails have accounts. Show that message as it is.
 ### Current user: `GET /api/v1/auth/me` (signed in)
 
 Returns **200** with the user object (`id`, `email`, `displayName`, `createdAt`). Use it when
-the app opens to check that a saved token still works.
+the app opens to check that a saved token still works, and after the user edits their
+profile, to refresh the stored user. The display name and bio are edited through
+[`PATCH /api/v1/profiles/me`](profiles.md#edit-your-profile-patch-apiv1profilesme-signed-in).
 
 ### Sign out: `POST /api/v1/auth/logout` (signed in)
 

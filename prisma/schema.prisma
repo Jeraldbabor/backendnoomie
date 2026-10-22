@@ -19,6 +19,8 @@ model User {
   /// Stored lowercased and trimmed, so uniqueness is case-insensitive.
   email        String    @unique @db.VarChar(254)
   displayName  String    @map("display_name") @db.VarChar(50)
+  /// Public profile text; null when the user hasn't written one.
+  bio          String?   @db.VarChar(160)
   /// scrypt hash with its parameters; never returned by the API.
   passwordHash String    @map("password_hash")
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)

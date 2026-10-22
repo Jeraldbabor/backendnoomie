@@ -35,6 +35,7 @@ backendnoomie/
 │   ├── features/              # one folder per business feature
 │   │   ├── auth/              # register, login, me, logout; SessionAuthGuard
 │   │   ├── health/
+│   │   ├── profiles/          # public profiles; edit your own via /profiles/me
 │   │   └── recipes/
 │   │       ├── dto/
 │   │       ├── recipes.controller.ts
@@ -88,18 +89,21 @@ dependencies only.
 
 ## Endpoints
 
-| Method | Path                    | Access      | Description                                       |
-| ------ | ----------------------- | ----------- | ------------------------------------------------- |
-| GET    | `/api/health`           | Public      | Liveness and database connectivity                |
-| POST   | `/api/v1/auth/register` | Public      | Create an account and sign in                     |
-| POST   | `/api/v1/auth/login`    | Public      | Sign in with email and password                   |
-| GET    | `/api/v1/auth/me`       | Signed in   | Current user                                      |
-| POST   | `/api/v1/auth/logout`   | Signed in   | Revoke the current session                        |
-| GET    | `/api/v1/recipes`       | Public      | List recipes (`?search=&cuisine=&limit=&cursor=`) |
-| GET    | `/api/v1/recipes/:id`   | Public      | Get one recipe                                    |
-| POST   | `/api/v1/recipes`       | Signed in   | Create a recipe; you become its author            |
-| PATCH  | `/api/v1/recipes/:id`   | Author only | Update your recipe                                |
-| DELETE | `/api/v1/recipes/:id`   | Author only | Delete your recipe                                |
+| Method | Path                       | Access      | Description                                                 |
+| ------ | -------------------------- | ----------- | ----------------------------------------------------------- |
+| GET    | `/api/health`              | Public      | Liveness and database connectivity                          |
+| POST   | `/api/v1/auth/register`    | Public      | Create an account and sign in                               |
+| POST   | `/api/v1/auth/login`       | Public      | Sign in with email and password                             |
+| GET    | `/api/v1/auth/me`          | Signed in   | Current user                                                |
+| POST   | `/api/v1/auth/logout`      | Signed in   | Revoke the current session                                  |
+| GET    | `/api/v1/recipes`          | Public      | List recipes (`?search=&cuisine=&authorId=&limit=&cursor=`) |
+| GET    | `/api/v1/recipes/:id`      | Public      | Get one recipe                                              |
+| POST   | `/api/v1/recipes`          | Signed in   | Create a recipe; you become its author                      |
+| PATCH  | `/api/v1/recipes/:id`      | Author only | Update your recipe                                          |
+| DELETE | `/api/v1/recipes/:id`      | Author only | Delete your recipe                                          |
+| GET    | `/api/v1/profiles/:userId` | Public      | A user's public profile                                     |
+| GET    | `/api/v1/profiles/me`      | Signed in   | Your own profile                                            |
+| PATCH  | `/api/v1/profiles/me`      | Signed in   | Edit your display name and bio                              |
 
 "Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
 session. "Author only" routes also answer **403** when the recipe belongs to someone else.
