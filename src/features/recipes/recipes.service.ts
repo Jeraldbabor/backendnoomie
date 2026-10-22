@@ -9,22 +9,27 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { CreateRecipeDto } from './dto/create-recipe.dto.js';
 import { ListRecipesQueryDto } from './dto/list-recipes-query.dto.js';
 import { UpdateRecipeDto } from './dto/update-recipe.dto.js';
-import { recipeSelect, RecipeView } from './recipes.types.js';
+import { recipeSelectFor, RecipeView, toRecipeView } from './recipes.types.js';
 
 @Injectable()
 export class RecipesService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** `authorId` comes from the verified session, never from the request body. */
-  create(dto: CreateRecipeDto, authorId: string): Promise<RecipeView> {
+  async create(dto: CreateRecipeDto, authorId: string): Promise<RecipeView> {
     const { title, description, cuisine, minutes, ingredients } = dto;
-    return this.prisma.recipe.create({
+    const recipe = await this.prisma.recipe.create({
       data: { title, description, cuisine, minutes, ingredients, authorId },
-      select: recipeSelect,
+      select: recipeSelectFor(authorId),
     });
+    return toRecipeView(recipe);
   }
 
-  async findMany(query: ListRecipesQueryDto): Promise<CursorPage<RecipeView>> {
+  /** `viewerId` is the signed-in user, if any; it only decides `savedByMe`. */
+  async findMany(
+    query: ListRecipesQueryDto,
+    viewerId?: string,
+  ): Promise<CursorPage<RecipeView>> {
     const { cursor, limit, search, cuisine, authorId } = query;
 
     // UUIDv7 ids are time-ordered, so `id < cursor` walks from newest to oldest
@@ -46,23 +51,23 @@ export class RecipesService {
       where,
       orderBy: { id: 'desc' },
       take: limit + 1,
-      select: recipeSelect,
+      select: recipeSelectFor(viewerId),
     });
 
     const hasMore = rows.length > limit;
-    const data = hasMore ? rows.slice(0, limit) : rows;
+    const data = (hasMore ? rows.slice(0, limit) : rows).map(toRecipeView);
     return { data, nextCursor: hasMore ? data[data.length - 1].id : null };
   }
 
-  async findOne(id: string): Promise<RecipeView> {
+  async findOne(id: string, viewerId?: string): Promise<RecipeView> {
     const recipe = await this.prisma.recipe.findUnique({
       where: { id },
-      select: recipeSelect,
+      select: recipeSelectFor(viewerId),
     });
     if (!recipe) {
       throw new NotFoundException(`Recipe ${id} not found`);
     }
-    return recipe;
+    return toRecipeView(recipe);
   }
 
   async update(
@@ -72,11 +77,12 @@ export class RecipesService {
   ): Promise<RecipeView> {
     await this.assertAuthor(id, userId);
     // If the recipe is deleted meanwhile, Prisma P2025 maps to 404 (PrismaExceptionFilter).
-    return this.prisma.recipe.update({
+    const recipe = await this.prisma.recipe.update({
       where: { id },
       data: dto,
-      select: recipeSelect,
+      select: recipeSelectFor(userId),
     });
+    return toRecipeView(recipe);
   }
 
   async remove(id: string, userId: string): Promise<void> {

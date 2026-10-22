@@ -88,14 +88,19 @@ const query = (params: Record<string, string | number | undefined>) =>
     .join('&');
 
 export const recipesApi = {
-  list: (params: {
-    search?: string;
-    cuisine?: string;
-    authorId?: string;
-    limit?: number;
-    cursor?: string;
-  }) => apiRequest<RecipePage>(`/recipes?${query(params)}`),
-  get: (id: string) => apiRequest<Recipe>(`/recipes/${id}`),
+  // Pass the token when signed in, so savedByMe is filled in.
+  list: (
+    params: {
+      search?: string;
+      cuisine?: string;
+      authorId?: string;
+      limit?: number;
+      cursor?: string;
+    },
+    token?: string | null,
+  ) => apiRequest<RecipePage>(`/recipes?${query(params)}`, { token }),
+  get: (id: string, token?: string | null) =>
+    apiRequest<Recipe>(`/recipes/${id}`, { token }),
   create: (input: RecipeInput, token: string) =>
     apiRequest<Recipe>('/recipes', { method: 'POST', body: input, token }),
   update: (id: string, input: Partial<RecipeInput>, token: string) =>
@@ -135,3 +140,26 @@ export const profilesApi = {
   `displayName` (the account panel shows it). Refresh it with `GET /api/v1/auth/me`, or
   update the stored user from the `PATCH` response. That needs a small addition to the auth
   feature, like the token helper above.
+
+## Saved recipes in the app
+
+The [saved recipes API](../api/saved-recipes.md), in `src/features/saved-recipes/api.ts`:
+
+```ts
+export const savedRecipesApi = {
+  list: (params: { limit?: number; cursor?: string }, token: string) =>
+    apiRequest<SavedRecipePage>(`/saved-recipes?${query(params)}`, { token }),
+  save: (recipeId: string, token: string) =>
+    apiRequest<void>(`/saved-recipes/${recipeId}`, { method: 'PUT', token }),
+  unsave: (recipeId: string, token: string) =>
+    apiRequest<void>(`/saved-recipes/${recipeId}`, { method: 'DELETE', token }),
+};
+```
+
+- **Bookmark buttons:** read `recipe.savedByMe` from recipe responses, which needs the token
+  on recipe reads (see `recipesApi` above). Then call `save` or `unsave`. Both are safe
+  to repeat, so a double tap or a retry can't break anything.
+- **Update the UI right away** and roll back if the request fails; then refresh the Saved
+  screen when it opens, so recipes deleted by their authors drop out.
+- **A 401 from a recipe read** now means the stored token is no longer valid. Sign out as
+  with any other 401.

@@ -15,13 +15,17 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { AuthContext } from '../auth/auth.types.js';
 import { CurrentAuth } from '../auth/current-auth.decorator.js';
-import { SessionAuthGuard } from '../auth/session-auth.guard.js';
+import {
+  OptionalSessionAuthGuard,
+  SessionAuthGuard,
+} from '../auth/session-auth.guard.js';
 import { CreateRecipeDto } from './dto/create-recipe.dto.js';
 import { ListRecipesQueryDto } from './dto/list-recipes-query.dto.js';
 import { UpdateRecipeDto } from './dto/update-recipe.dto.js';
 import { RecipesService } from './recipes.service.js';
 
-// Reading is open; creating requires sign-in, and only the author can update or delete.
+// Reading is open (signed-in readers also get savedByMe); creating requires sign-in, and
+// only the author can update or delete.
 @ApiTags('recipes')
 @Controller('recipes')
 export class RecipesController {
@@ -35,13 +39,23 @@ export class RecipesController {
   }
 
   @Get()
-  findMany(@Query() query: ListRecipesQueryDto) {
-    return this.recipesService.findMany(query);
+  @UseGuards(OptionalSessionAuthGuard)
+  @ApiBearerAuth()
+  findMany(
+    @Query() query: ListRecipesQueryDto,
+    @CurrentAuth() auth: AuthContext | undefined,
+  ) {
+    return this.recipesService.findMany(query, auth?.user.id);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.recipesService.findOne(id);
+  @UseGuards(OptionalSessionAuthGuard)
+  @ApiBearerAuth()
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentAuth() auth: AuthContext | undefined,
+  ) {
+    return this.recipesService.findOne(id, auth?.user.id);
   }
 
   @Patch(':id')

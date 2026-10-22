@@ -2,6 +2,20 @@
 
 Newest first. **Breaking** entries say what the app must change.
 
+## 2026-10-22: Saved recipes (not breaking; one read-endpoint change to note)
+
+- New: `GET /api/v1/saved-recipes`, `PUT` and `DELETE /api/v1/saved-recipes/:recipeId`
+  (signed in). Saving and unsaving are safe to repeat. Saved items reference the live
+  original recipe; a recipe deleted by its author disappears from everyone's saved list.
+- Recipe responses have a new field: `savedByMe` (`false` without a token).
+- `GET /api/v1/recipes` and `GET /api/v1/recipes/:id` now read the token when one is sent.
+  An **invalid or expired token on these reads now returns 401**; before, it was ignored.
+  Requests without a token are unchanged.
+
+**What the app can do:** send the session token on recipe reads to get `savedByMe`, show a
+bookmark button, and add a Saved screen. If the app sends a token on recipe reads, handle
+401 there like on any signed-in request. Details: [saved recipes](api/saved-recipes.md).
+
 ## 2026-10-22: Profiles (not breaking)
 
 - New: `GET /api/v1/profiles/:userId` (anyone), and `GET` / `PATCH /api/v1/profiles/me`

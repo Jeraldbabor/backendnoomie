@@ -33,7 +33,8 @@ When reporting work as done, list which docs were updated, or say why none were 
 ## Conventions
 
 - One folder per feature in `src/features/<feature>/`: controller, service, DTOs, tests.
-- Identity comes from `@CurrentAuth()` behind `SessionAuthGuard`, never from request bodies.
+- Identity comes from `@CurrentAuth()` behind `SessionAuthGuard` (or
+  `OptionalSessionAuthGuard` for public routes that personalize), never from request bodies.
   Check ownership in the service. Test anonymous, owner, other-user, and forged-field cases.
 - Responses use explicit Prisma `select` shapes (see `recipes.types.ts`); never return
   password hashes, token hashes, or other users' emails.
