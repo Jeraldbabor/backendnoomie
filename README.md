@@ -36,6 +36,7 @@ backendnoomie/
 │   │   ├── auth/              # register, login, me, logout; SessionAuthGuard
 │   │   ├── health/
 │   │   ├── profiles/          # public profiles; edit your own via /profiles/me
+│   │   ├── saved-recipes/     # each user's private bookmarks of recipes
 │   │   └── recipes/
 │   │       ├── dto/
 │   │       ├── recipes.controller.ts
@@ -89,21 +90,24 @@ dependencies only.
 
 ## Endpoints
 
-| Method | Path                       | Access      | Description                                                 |
-| ------ | -------------------------- | ----------- | ----------------------------------------------------------- |
-| GET    | `/api/health`              | Public      | Liveness and database connectivity                          |
-| POST   | `/api/v1/auth/register`    | Public      | Create an account and sign in                               |
-| POST   | `/api/v1/auth/login`       | Public      | Sign in with email and password                             |
-| GET    | `/api/v1/auth/me`          | Signed in   | Current user                                                |
-| POST   | `/api/v1/auth/logout`      | Signed in   | Revoke the current session                                  |
-| GET    | `/api/v1/recipes`          | Public      | List recipes (`?search=&cuisine=&authorId=&limit=&cursor=`) |
-| GET    | `/api/v1/recipes/:id`      | Public      | Get one recipe                                              |
-| POST   | `/api/v1/recipes`          | Signed in   | Create a recipe; you become its author                      |
-| PATCH  | `/api/v1/recipes/:id`      | Author only | Update your recipe                                          |
-| DELETE | `/api/v1/recipes/:id`      | Author only | Delete your recipe                                          |
-| GET    | `/api/v1/profiles/:userId` | Public      | A user's public profile                                     |
-| GET    | `/api/v1/profiles/me`      | Signed in   | Your own profile                                            |
-| PATCH  | `/api/v1/profiles/me`      | Signed in   | Edit your display name and bio                              |
+| Method | Path                              | Access      | Description                                                 |
+| ------ | --------------------------------- | ----------- | ----------------------------------------------------------- |
+| GET    | `/api/health`                     | Public      | Liveness and database connectivity                          |
+| POST   | `/api/v1/auth/register`           | Public      | Create an account and sign in                               |
+| POST   | `/api/v1/auth/login`              | Public      | Sign in with email and password                             |
+| GET    | `/api/v1/auth/me`                 | Signed in   | Current user                                                |
+| POST   | `/api/v1/auth/logout`             | Signed in   | Revoke the current session                                  |
+| GET    | `/api/v1/recipes`                 | Public      | List recipes (`?search=&cuisine=&authorId=&limit=&cursor=`) |
+| GET    | `/api/v1/recipes/:id`             | Public      | Get one recipe                                              |
+| POST   | `/api/v1/recipes`                 | Signed in   | Create a recipe; you become its author                      |
+| PATCH  | `/api/v1/recipes/:id`             | Author only | Update your recipe                                          |
+| DELETE | `/api/v1/recipes/:id`             | Author only | Delete your recipe                                          |
+| GET    | `/api/v1/profiles/:userId`        | Public      | A user's public profile                                     |
+| GET    | `/api/v1/profiles/me`             | Signed in   | Your own profile                                            |
+| PATCH  | `/api/v1/profiles/me`             | Signed in   | Edit your display name and bio                              |
+| GET    | `/api/v1/saved-recipes`           | Signed in   | Your saved recipes, most recently saved first               |
+| PUT    | `/api/v1/saved-recipes/:recipeId` | Signed in   | Save a recipe (safe to repeat)                              |
+| DELETE | `/api/v1/saved-recipes/:recipeId` | Signed in   | Unsave a recipe (safe to repeat)                            |
 
 "Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
 session. "Author only" routes also answer **403** when the recipe belongs to someone else.
@@ -132,7 +136,10 @@ Registering an existing email returns 409. Auth routes allow 10 requests per min
 and route; everything else allows 120.
 
 To protect a route in another feature, import `AuthModule`, add
-`@UseGuards(SessionAuthGuard)`, and read the user with `@CurrentAuth()`.
+`@UseGuards(SessionAuthGuard)`, and read the user with `@CurrentAuth()`. For a public route
+that personalizes its response (like `savedByMe` on recipe reads), use
+`OptionalSessionAuthGuard`: `@CurrentAuth()` is then undefined without a token, and an
+invalid token still gets 401.
 
 `features/recipes` is the reference: guard the write routes, pass `auth.user.id` to the
 service, and check ownership in the service before changing anything.

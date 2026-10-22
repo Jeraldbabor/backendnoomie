@@ -1,19 +1,23 @@
 # Recipes
 
 Anyone can read recipes. Signed-in users can create recipes, and only a recipe's **author**
-can edit or delete it.
+can edit or delete it. Signed-in users can also [save recipes](saved-recipes.md).
 
 How to call these from the Noomie app: [app integration](../app-integration/noomie-app.md#adding-a-feature-api-module).
 
 ## Endpoints
 
-| Method | Path                  | Who         | Success |
-| ------ | --------------------- | ----------- | ------- |
-| GET    | `/api/v1/recipes`     | Anyone      | 200     |
-| GET    | `/api/v1/recipes/:id` | Anyone      | 200     |
-| POST   | `/api/v1/recipes`     | Signed in   | 201     |
-| PATCH  | `/api/v1/recipes/:id` | Author only | 200     |
-| DELETE | `/api/v1/recipes/:id` | Author only | 204     |
+| Method | Path                  | Who    | Success |
+| ------ | --------------------- | ------ | ------- |
+| GET    | `/api/v1/recipes`     | Anyone | 200     |
+| GET    | `/api/v1/recipes/:id` | Anyone | 200     |
+
+The two read endpoints work without a token. **Send the token when the user is signed in**:
+then `savedByMe` is filled in for them. A token that is sent but invalid or expired gets
+**401** `Sign in to continue` (it isn't silently ignored), so treat it like any other 401.
+| POST | `/api/v1/recipes` | Signed in | 201 |
+| PATCH | `/api/v1/recipes/:id` | Author only | 200 |
+| DELETE | `/api/v1/recipes/:id` | Author only | 204 |
 
 ## The recipe object
 
@@ -30,7 +34,8 @@ How to call these from the Noomie app: [app integration](../app-integration/noom
   "author": {
     "id": "01a16214-16ed-71e7-8d20-534458198445",
     "displayName": "Ada"
-  }
+  },
+  "savedByMe": false
 }
 ```
 
@@ -39,6 +44,8 @@ How to call these from the Noomie app: [app integration](../app-integration/noom
 - The author only includes public fields. Emails are never included.
 - To decide whether to show edit/delete buttons, compare `recipe.author?.id` with the
   signed-in user's `id`. That only decides what to show; the server checks every request.
+- **`savedByMe`** is `true` when the signed-in user has [saved](saved-recipes.md) this recipe.
+  It's always `false` without a token. It never reveals who else saved a recipe.
 
 ## List recipes: `GET /api/v1/recipes`
 
@@ -118,6 +125,7 @@ type Recipe = {
   createdAt: string;
   updatedAt: string;
   author: { id: string; displayName: string } | null;
+  savedByMe: boolean;
 };
 type RecipePage = { data: Recipe[]; nextCursor: string | null };
 type RecipeInput = {

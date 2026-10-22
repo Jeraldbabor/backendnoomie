@@ -27,6 +27,7 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   sessions     Session[]
   recipes      Recipe[]
+  savedRecipes SavedRecipe[]
 
   @@map("users")
 }
@@ -58,8 +59,26 @@ model Recipe {
   author      User?    @relation(fields: [authorId], references: [id], onDelete: Restrict)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  saves       SavedRecipe[]
 
   @@index([cuisine])
   @@index([authorId])
   @@map("recipes")
+}
+
+/// A user's bookmark. It references the original recipe (never a copy), so the author's
+/// edits and attribution always show. Deleting the recipe deletes everyone's save of it.
+model SavedRecipe {
+  /// Time-ordered, so the saved list pages newest-saved first with a stable cursor.
+  id       String   @id @default(uuid(7)) @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId String   @map("recipe_id") @db.Uuid
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  savedAt  DateTime @default(now()) @map("saved_at") @db.Timestamptz(3)
+
+  @@unique([userId, recipeId])
+  @@index([userId, id])
+  @@index([recipeId])
+  @@map("saved_recipes")
 }

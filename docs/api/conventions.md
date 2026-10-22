@@ -18,6 +18,8 @@ the database is unreachable. It isn't rate-limited.
 
 - Send and receive **JSON**. Set `Content-Type: application/json` when there is a body.
 - Signed-in requests send `Authorization: Bearer <token>`. See [authentication](authentication.md).
+  Some public endpoints (recipe reads) also accept a token to personalize the response; if
+  you send one there, it must be valid, or you get 401.
 - **Only send the fields an endpoint documents.** Unknown fields are rejected with 400
   (`property X should not exist`). This is on purpose: for example, nobody can set a
   recipe's author by sending `authorId`.
@@ -93,6 +95,5 @@ List endpoints use **cursor paging**:
 
 ## Not available yet
 
-Saved recipes, image uploads (including profile photos), password reset, email
-verification, account deletion, and "sign out everywhere". To request one, see
+Image uploads (including profile photos), password reset, email verification, account deletion, and "sign out everywhere". To request one, see
 [working together](../team/working-together.md#asking-for-a-new-endpoint-or-field).

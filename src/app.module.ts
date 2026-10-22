@@ -9,6 +9,7 @@ import { AuthModule } from './features/auth/auth.module.js';
 import { HealthModule } from './features/health/health.module.js';
 import { ProfilesModule } from './features/profiles/profiles.module.js';
 import { RecipesModule } from './features/recipes/recipes.module.js';
+import { SavedRecipesModule } from './features/saved-recipes/saved-recipes.module.js';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { RecipesModule } from './features/recipes/recipes.module.js';
     HealthModule,
     ProfilesModule,
     RecipesModule,
+    SavedRecipesModule,
   ],
   providers: [
     {
