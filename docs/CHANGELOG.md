@@ -2,6 +2,18 @@
 
 Newest first. **Breaking** entries say what the app must change.
 
+## 2026-10-22: Profiles (not breaking)
+
+- New: `GET /api/v1/profiles/:userId` (anyone), and `GET` / `PATCH /api/v1/profiles/me`
+  (signed in). A profile has `id`, `displayName`, `bio`, `createdAt`, and `recipeCount`,
+  and never includes email.
+- Users can now change their display name and add a bio (up to 160 characters).
+- New filter: `GET /api/v1/recipes?authorId=<userId>` lists one user's recipes.
+
+**What the app can do:** link recipe authors (`author.id`) to their profile, add a Profile
+screen, and let users edit their name and bio. Nothing existing changed. Details:
+[profiles](api/profiles.md).
+
 ## 2026-10-22: Recipe authors (breaking for recipe create, edit and delete)
 
 - `POST /api/v1/recipes` now requires sign-in (401 without a token). The signed-in user

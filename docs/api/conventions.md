@@ -93,6 +93,6 @@ List endpoints use **cursor paging**:
 
 ## Not available yet
 
-Profiles, saved recipes, image uploads, password reset, email verification, account
-deletion, and "sign out everywhere". To request one, see
+Saved recipes, image uploads (including profile photos), password reset, email
+verification, account deletion, and "sign out everywhere". To request one, see
 [working together](../team/working-together.md#asking-for-a-new-endpoint-or-field).
