@@ -24,6 +24,7 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   sessions     Session[]
+  recipes      Recipe[]
 
   @@map("users")
 }
@@ -48,9 +49,15 @@ model Recipe {
   cuisine     String   @db.VarChar(60)
   minutes     Int
   ingredients String[]
+  /// Set from the signed-in user when created, never from the request body, and never
+  /// changed afterwards. Null for Noomie editorial recipes (seed data), which no user can edit.
+  /// Restrict: deleting a user with recipes needs an explicit attribution decision first.
+  authorId    String?  @map("author_id") @db.Uuid
+  author      User?    @relation(fields: [authorId], references: [id], onDelete: Restrict)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([cuisine])
+  @@index([authorId])
   @@map("recipes")
 }
