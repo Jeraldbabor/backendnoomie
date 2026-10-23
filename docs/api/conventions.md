@@ -64,15 +64,15 @@ For validation errors (400), `message` is a **list** of all problems:
 Decide what to do from the **status code**, not the message text. Show `message` to users
 only where a feature page says it's user-friendly (validation, login, duplicate email).
 
-| Status | Meaning                              | What the app should do                                                                           |
-| ------ | ------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| 400    | Invalid input or malformed ID        | Show the field messages; fix the request                                                         |
-| 401    | Not signed in, or the session ended  | Clear the stored session and go to sign-in                                                       |
-| 403    | Signed in, but not allowed           | Explain the user can't do this; don't retry                                                      |
-| 404    | Doesn't exist (or was deleted)       | Show a "not found" state                                                                         |
-| 409    | Conflict, like an email already used | Show the message                                                                                 |
-| 429    | Too many requests                    | Ask the user to wait a minute; don't auto-retry                                                  |
-| 500    | Server problem                       | Generic "something went wrong"; [report it](../team/working-together.md#reporting-a-backend-bug) |
+| Status | Meaning                                                                | What the app should do                                                                           |
+| ------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 400    | Invalid input, malformed ID, or a wrong password on an account setting | Show the field messages; fix the request                                                         |
+| 401    | Not signed in, or the session ended                                    | Clear the stored session and go to sign-in                                                       |
+| 403    | Signed in, but not allowed                                             | Explain the user can't do this; don't retry                                                      |
+| 404    | Doesn't exist (or was deleted)                                         | Show a "not found" state                                                                         |
+| 409    | Conflict, like an email already used                                   | Show the message                                                                                 |
+| 429    | Too many requests                                                      | Ask the user to wait a minute; don't auto-retry                                                  |
+| 500    | Server problem                                                         | Generic "something went wrong"; [report it](../team/working-together.md#reporting-a-backend-bug) |
 
 ## Lists and paging
 
@@ -95,5 +95,6 @@ List endpoints use **cursor paging**:
 
 ## Not available yet
 
-Image uploads (including profile photos), password reset, email verification, account deletion, and "sign out everywhere". To request one, see
+Image uploads (including profile photos), password reset (forgot password), email
+verification, and changing email. To request one, see
 [working together](../team/working-together.md#asking-for-a-new-endpoint-or-field).

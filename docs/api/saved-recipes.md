@@ -67,8 +67,8 @@ No body. Returns **204**, also when the recipe wasn't saved, or doesn't exist an
 
 ## When a recipe is deleted
 
-If the author deletes a recipe, it disappears from everyone's saved list. There is no
-"deleted recipe" placeholder.
+If the author deletes a recipe, or [deletes their account](authentication.md#delete-account-post-apiv1authdelete-account-signed-in),
+it disappears from everyone's saved list. There is no "deleted recipe" placeholder.
 
 ## Errors
 

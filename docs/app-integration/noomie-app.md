@@ -163,3 +163,43 @@ export const savedRecipesApi = {
   screen when it opens, so recipes deleted by their authors drop out.
 - **A 401 from a recipe read** now means the stored token is no longer valid. Sign out as
   with any other 401.
+
+## Account settings in the app
+
+The [account settings endpoints](../api/authentication.md#account-settings) belong in the
+existing `authApi` in `src/features/auth/api.ts`:
+
+```ts
+export const authApi = {
+  // ...register, login, me, logout as today
+  logoutAll: (token: string) =>
+    apiRequest<void>('/auth/logout-all', { method: 'POST', token }),
+  changePassword: (
+    input: { currentPassword: string; newPassword: string },
+    token: string,
+  ) =>
+    apiRequest<void>('/auth/change-password', {
+      method: 'POST',
+      body: input,
+      token,
+    }),
+  deleteAccount: (password: string, token: string) =>
+    apiRequest<void>('/auth/delete-account', {
+      method: 'POST',
+      body: { password },
+      token,
+    }),
+};
+```
+
+- **A wrong password comes back as 400**, so `toApiError()` gives `validation`, and the
+  session isn't touched. Show the message under the password field.
+- **After change password,** keep the stored token and user; this device stays signed in.
+  Tell the user their other devices were signed out.
+- **After sign out everywhere or delete account,** the token is already dead on the server.
+  Call `signOut()` from `useSession()`: it clears the local session first, and the
+  `/auth/logout` call it makes afterwards gets a 401 that it already ignores.
+- **Delete account** needs a confirmation step that says what will be deleted (the account,
+  the saved list, and every recipe the user wrote) and asks for the password.
+- These screens need the token, like other signed-in features; use the token helper
+  described in [authentication in the app](#authentication-in-the-app).

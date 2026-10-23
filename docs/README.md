@@ -5,18 +5,19 @@ read the backend code. Examples are based on real API responses.
 
 ## Find what you need
 
-| I want to…                                         | Read                                                    |
-| -------------------------------------------------- | ------------------------------------------------------- |
-| Run the backend on my computer for the first time  | [Run the backend](setup/local-backend.md)               |
-| Start, stop, update, or fix the local backend      | [Daily use and troubleshooting](setup/daily-use.md)     |
-| Understand errors, paging, limits, and field rules | [API conventions](api/conventions.md)                   |
-| Sign users up, in, and out                         | [Authentication](api/authentication.md)                 |
-| Show, create, edit, or delete recipes              | [Recipes](api/recipes.md)                               |
-| Show a user's profile, or let users edit their own | [Profiles](api/profiles.md)                             |
-| Let users save recipes and see their saved list    | [Saved recipes](api/saved-recipes.md)                   |
-| Call the API from the Noomie app's code            | [Noomie app integration](app-integration/noomie-app.md) |
-| Ask for a new endpoint, or report a bug            | [Working together](team/working-together.md)            |
-| See what changed in the API                        | [Changelog](CHANGELOG.md)                               |
+| I want to…                                           | Read                                                       |
+| ---------------------------------------------------- | ---------------------------------------------------------- |
+| Run the backend on my computer for the first time    | [Run the backend](setup/local-backend.md)                  |
+| Start, stop, update, or fix the local backend        | [Daily use and troubleshooting](setup/daily-use.md)        |
+| Understand errors, paging, limits, and field rules   | [API conventions](api/conventions.md)                      |
+| Sign users up, in, and out                           | [Authentication](api/authentication.md)                    |
+| Change password, sign out everywhere, delete account | [Account settings](api/authentication.md#account-settings) |
+| Show, create, edit, or delete recipes                | [Recipes](api/recipes.md)                                  |
+| Show a user's profile, or let users edit their own   | [Profiles](api/profiles.md)                                |
+| Let users save recipes and see their saved list      | [Saved recipes](api/saved-recipes.md)                      |
+| Call the API from the Noomie app's code              | [Noomie app integration](app-integration/noomie-app.md)    |
+| Ask for a new endpoint, or report a bug              | [Working together](team/working-together.md)               |
+| See what changed in the API                          | [Changelog](CHANGELOG.md)                                  |
 
 New to the project? Read them top to bottom once.
 
@@ -56,6 +57,9 @@ docs/
 | POST   | `/api/v1/auth/login`              | Anyone      | [Authentication](api/authentication.md)        |
 | GET    | `/api/v1/auth/me`                 | Signed in   | [Authentication](api/authentication.md)        |
 | POST   | `/api/v1/auth/logout`             | Signed in   | [Authentication](api/authentication.md)        |
+| POST   | `/api/v1/auth/logout-all`         | Signed in   | [Authentication](api/authentication.md)        |
+| POST   | `/api/v1/auth/change-password`    | Signed in   | [Authentication](api/authentication.md)        |
+| POST   | `/api/v1/auth/delete-account`     | Signed in   | [Authentication](api/authentication.md)        |
 | GET    | `/api/v1/recipes`                 | Anyone      | [Recipes](api/recipes.md)                      |
 | GET    | `/api/v1/recipes/:id`             | Anyone      | [Recipes](api/recipes.md)                      |
 | POST   | `/api/v1/recipes`                 | Signed in   | [Recipes](api/recipes.md)                      |

@@ -1,4 +1,8 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { EnvironmentVariables } from '../../config/env.validation.js';
 import type { PrismaService } from '../../database/prisma.service.js';
@@ -16,8 +20,15 @@ const user = {
 
 describe('AuthService', () => {
   const prisma = {
-    user: { create: vi.fn(), findUnique: vi.fn() },
+    user: {
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
     session: { create: vi.fn(), findUnique: vi.fn(), deleteMany: vi.fn() },
+    recipe: { deleteMany: vi.fn() },
+    $transaction: vi.fn(),
   };
   const passwords = { hash: vi.fn(), verify: vi.fn() };
   const config = { get: vi.fn(() => 30) };
@@ -27,6 +38,9 @@ describe('AuthService', () => {
     vi.resetAllMocks();
     config.get.mockReturnValue(30);
     passwords.hash.mockResolvedValue('hashed');
+    prisma.$transaction.mockImplementation((steps: unknown[]) =>
+      Promise.all(steps),
+    );
     service = new AuthService(
       prisma as unknown as PrismaService,
       passwords as unknown as PasswordService,
@@ -155,6 +169,92 @@ describe('AuthService', () => {
     it('rejects an unknown token', async () => {
       prisma.session.findUnique.mockResolvedValue(null);
       await expect(service.authenticate('token')).resolves.toBeNull();
+    });
+  });
+
+  describe('account management', () => {
+    const auth = { user, sessionId: 'session-current' };
+
+    describe('changePassword', () => {
+      it('rejects a wrong current password without changing anything', async () => {
+        prisma.user.findUnique.mockResolvedValue({ passwordHash: 'stored' });
+        passwords.verify.mockResolvedValue(false);
+
+        await expect(
+          service.changePassword(auth, {
+            currentPassword: 'wrong',
+            newPassword: 'new-password',
+          }),
+        ).rejects.toThrow('Current password is incorrect');
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
+      it('rejects reusing the current password', async () => {
+        prisma.user.findUnique.mockResolvedValue({ passwordHash: 'stored' });
+        passwords.verify.mockResolvedValue(true);
+
+        await expect(
+          service.changePassword(auth, {
+            currentPassword: 'same-password',
+            newPassword: 'same-password',
+          }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+      });
+
+      it('stores the new hash and signs out every other device', async () => {
+        prisma.user.findUnique.mockResolvedValue({ passwordHash: 'stored' });
+        passwords.verify.mockResolvedValue(true);
+
+        await service.changePassword(auth, {
+          currentPassword: 'old-password',
+          newPassword: 'new-password',
+        });
+
+        expect(passwords.hash).toHaveBeenCalledWith('new-password');
+        expect(prisma.user.update).toHaveBeenCalledWith({
+          where: { id: user.id },
+          data: { passwordHash: 'hashed' },
+        });
+        expect(prisma.session.deleteMany).toHaveBeenCalledWith({
+          where: { userId: user.id, id: { not: 'session-current' } },
+        });
+      });
+    });
+
+    it('logoutAll signs out every device, including this one', async () => {
+      await service.logoutAll(user.id);
+
+      expect(prisma.session.deleteMany).toHaveBeenCalledWith({
+        where: { userId: user.id },
+      });
+    });
+
+    describe('deleteAccount', () => {
+      it('requires the correct password', async () => {
+        prisma.user.findUnique.mockResolvedValue({ passwordHash: 'stored' });
+        passwords.verify.mockResolvedValue(false);
+
+        await expect(service.deleteAccount(user.id, 'wrong')).rejects.toThrow(
+          'Password is incorrect',
+        );
+        expect(prisma.user.delete).not.toHaveBeenCalled();
+        expect(prisma.recipe.deleteMany).not.toHaveBeenCalled();
+      });
+
+      it("deletes the user's recipes and then the user, together", async () => {
+        prisma.user.findUnique.mockResolvedValue({ passwordHash: 'stored' });
+        passwords.verify.mockResolvedValue(true);
+
+        await service.deleteAccount(user.id, 'right');
+
+        expect(prisma.recipe.deleteMany).toHaveBeenCalledWith({
+          where: { authorId: user.id },
+        });
+        expect(prisma.user.delete).toHaveBeenCalledWith({
+          where: { id: user.id },
+        });
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      });
     });
   });
 });

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -13,6 +14,7 @@ import {
   PublicUser,
   publicUserSelect,
 } from './auth.types.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { PasswordService } from './password.service.js';
@@ -106,6 +108,74 @@ export class AuthService {
   /** Ends one device's session; other devices stay signed in. */
   async logout(sessionId: string): Promise<void> {
     await this.prisma.session.deleteMany({ where: { id: sessionId } });
+  }
+
+  /** Signs out every device, including the one making the request. */
+  async logoutAll(userId: string): Promise<void> {
+    await this.prisma.session.deleteMany({ where: { userId } });
+  }
+
+  /**
+   * Changes the password after checking the current one. Every other device is signed out;
+   * the session that made the change stays signed in.
+   */
+  async changePassword(
+    auth: AuthContext,
+    dto: ChangePasswordDto,
+  ): Promise<void> {
+    await this.assertPassword(
+      auth.user.id,
+      dto.currentPassword,
+      'Current password is incorrect',
+    );
+    if (dto.newPassword === dto.currentPassword) {
+      throw new BadRequestException(
+        'Choose a new password that is different from the current one',
+      );
+    }
+    const passwordHash = await this.passwords.hash(dto.newPassword);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: auth.user.id },
+        data: { passwordHash },
+      }),
+      this.prisma.session.deleteMany({
+        where: { userId: auth.user.id, id: { not: auth.sessionId } },
+      }),
+    ]);
+  }
+
+  /**
+   * Permanently deletes the account and everything it created: its sessions, its saves, and
+   * its recipes (with everyone's saves of them). The password is required, so a borrowed or
+   * stolen signed-in phone can't delete the account.
+   */
+  async deleteAccount(userId: string, password: string): Promise<void> {
+    await this.assertPassword(userId, password, 'Password is incorrect');
+    // Recipes first: a recipe's author link is RESTRICT. Everything else cascades from the
+    // user row: sessions, the user's saves, and other users' saves of the deleted recipes.
+    await this.prisma.$transaction([
+      this.prisma.recipe.deleteMany({ where: { authorId: userId } }),
+      this.prisma.user.delete({ where: { id: userId } }),
+    ]);
+  }
+
+  /**
+   * 400 rather than 401 on a wrong password: the session is still valid, and 401 would make
+   * the app sign the user out.
+   */
+  private async assertPassword(
+    userId: string,
+    password: string,
+    message: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    if (!user || !(await this.passwords.verify(password, user.passwordHash))) {
+      throw new BadRequestException(message);
+    }
   }
 
   private async startSession(user: PublicUser): Promise<AuthResult> {
