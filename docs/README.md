@@ -15,6 +15,7 @@ read the backend code. Examples are based on real API responses.
 | Show, create, edit, or delete recipes                | [Recipes](api/recipes.md)                                  |
 | Show a user's profile, or let users edit their own   | [Profiles](api/profiles.md)                                |
 | Let users save recipes and see their saved list      | [Saved recipes](api/saved-recipes.md)                      |
+| Find recipes from the ingredients a user has         | [Discover](api/discover.md)                                |
 | Call the API from the Noomie app's code              | [Noomie app integration](app-integration/noomie-app.md)    |
 | Ask for a new endpoint, or report a bug              | [Working together](team/working-together.md)               |
 | See what changed in the API                          | [Changelog](CHANGELOG.md)                                  |
@@ -36,6 +37,7 @@ docs/
 │   ├── recipes.md
 │   ├── profiles.md
 │   ├── saved-recipes.md
+│   ├── discover.md
 │   └── _template.md          template for documenting a new feature
 ├── app-integration/          how the Noomie app's code should call the API
 │   └── noomie-app.md
@@ -70,6 +72,7 @@ docs/
 | PATCH  | `/api/v1/profiles/me`             | Signed in   | [Profiles](api/profiles.md)                    |
 | GET    | `/api/v1/saved-recipes`           | Signed in   | [Saved recipes](api/saved-recipes.md)          |
 | PUT    | `/api/v1/saved-recipes/:recipeId` | Signed in   | [Saved recipes](api/saved-recipes.md)          |
+| GET    | `/api/v1/discover/recipes`        | Anyone      | [Discover](api/discover.md)                    |
 | DELETE | `/api/v1/saved-recipes/:recipeId` | Signed in   | [Saved recipes](api/saved-recipes.md)          |
 
 Locally the API runs at `http://localhost:3000`.

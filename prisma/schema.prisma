@@ -85,8 +85,13 @@ model RecipeIngredient {
   unit     String? @db.VarChar(10)
   /// Free text such as "chopped" or "to taste".
   note     String? @db.VarChar(100)
+  /// What Discover matches on: `name` without case, accents, punctuation, or plural endings.
+  /// The database fills it on every insert and update (trigger recipe_ingredients_set_match_key,
+  /// SQL function ingredient_match_key); never set it in code.
+  matchKey String? @map("match_key")
 
   @@id([recipeId, position])
+  @@index([matchKey])
   @@map("recipe_ingredients")
 }
 

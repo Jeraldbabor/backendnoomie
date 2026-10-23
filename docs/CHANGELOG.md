@@ -2,6 +2,21 @@
 
 Newest first. **Breaking** entries say what the app must change.
 
+## 2026-10-23: Discover by ingredients (not breaking)
+
+- New: `GET /api/v1/discover/recipes?ingredients=pasta,tomato,garlic` (anyone; send the
+  token for `savedByMe`). Returns recipes that use the user's ingredients, fewest missing
+  first, each with `match: { have, needed, missing }`.
+- Filters: `cuisine`, `maxMinutes`, and `maxMissing` (`0` = can cook now). Results are one
+  ranked page (`limit` up to 50), without `nextCursor`.
+- Matching ignores case, accents, punctuation and plural endings. Ingredients without a
+  quantity ("salt, to taste") are optional and never count as missing.
+- The sample recipes' `white miso` is now `miso` with the note `white`, so it matches. Run
+  `docker compose run --rm migrate npx prisma db seed` to refresh them.
+
+**What the app can do:** add a "What can I cook?" screen where users enter what they have.
+Nothing existing changed. Details: [discover](api/discover.md).
+
 ## 2026-10-23: Complete recipes (breaking for recipe create and edit, and recipe types)
 
 - Recipes have two new fields: `servings` (how many portions) and `steps` (the cooking

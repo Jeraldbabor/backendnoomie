@@ -37,6 +37,7 @@ backendnoomie/
 │   │   ├── health/
 │   │   ├── profiles/          # public profiles; edit your own via /profiles/me
 │   │   ├── saved-recipes/     # each user's private bookmarks of recipes
+│   │   ├── discover/          # recipes ranked by the ingredients a user has
 │   │   └── recipes/
 │   │       ├── dto/
 │   │       ├── recipes.controller.ts
@@ -111,6 +112,7 @@ dependencies only.
 | GET    | `/api/v1/saved-recipes`           | Signed in   | Your saved recipes, most recently saved first                |
 | PUT    | `/api/v1/saved-recipes/:recipeId` | Signed in   | Save a recipe (safe to repeat)                               |
 | DELETE | `/api/v1/saved-recipes/:recipeId` | Signed in   | Unsave a recipe (safe to repeat)                             |
+| GET    | `/api/v1/discover/recipes`        | Public      | Recipes ranked by the `?ingredients=` a user has             |
 
 "Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
 session. "Author only" routes also answer **403** when the recipe belongs to someone else.
@@ -119,6 +121,13 @@ A recipe has `servings`, ordered `steps`, and structured `ingredients`
 (`{ name, quantity, unit, note }`, stored one row each in `recipe_ingredients`, units from
 `INGREDIENT_UNITS`). Lists return recipes without `steps`; the single-recipe read, create and
 update return them. Editing `ingredients` or `steps` replaces the whole list.
+
+Discover matches ingredients on `recipe_ingredients.match_key`, which the **database** fills:
+the SQL function `ingredient_match_key(name)` (case, accents, punctuation, plural endings)
+and the trigger `recipe_ingredients_set_match_key`, both created in the
+`add_ingredient_match_key` migration. The search terms go through the same function, so the
+rules live in one place; never set `match_key` from code. To change the rules, add a
+migration that replaces the function and re-runs `UPDATE recipe_ingredients SET name = name`.
 
 Recipes include `author: { id, displayName } | null`. The author is set from the signed-in
 user when the recipe is created and never changes; sending `authorId` is rejected (400).

@@ -55,7 +55,7 @@ const recipes = [
     ingredients: [
       { name: 'rice', quantity: 200, unit: 'g', note: 'short-grain' },
       { name: 'mushrooms', quantity: 250, unit: 'g', note: 'sliced' },
-      { name: 'white miso', quantity: 1, unit: 'tbsp' },
+      { name: 'miso', quantity: 1, unit: 'tbsp', note: 'white' },
       { name: 'butter', quantity: 1, unit: 'tbsp' },
       { name: 'spring onion', quantity: 2, note: 'thinly sliced' },
     ] satisfies SeedIngredient[],
