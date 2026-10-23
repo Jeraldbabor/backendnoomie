@@ -42,6 +42,8 @@ backendnoomie/
 │   │   ├── saved-recipes/     # each user's private bookmarks of recipes
 │   │   ├── discover/          # recipes ranked by the ingredients a user has
 │   │   ├── images/            # photo processing, storage, and serving image files
+│   │   ├── follows/           # follow/unfollow, followers and following lists
+│   │   ├── feed/              # recipes by the people you follow
 │   │   └── recipes/
 │   │       ├── dto/
 │   │       ├── recipes.controller.ts
@@ -95,33 +97,38 @@ dependencies only.
 
 ## Endpoints
 
-| Method | Path                              | Access      | Description                                                  |
-| ------ | --------------------------------- | ----------- | ------------------------------------------------------------ |
-| GET    | `/api/health`                     | Public      | Liveness and database connectivity                           |
-| POST   | `/api/v1/auth/register`           | Public      | Create an account and sign in                                |
-| POST   | `/api/v1/auth/login`              | Public      | Sign in with email and password                              |
-| GET    | `/api/v1/auth/me`                 | Signed in   | Current user                                                 |
-| POST   | `/api/v1/auth/logout`             | Signed in   | Revoke the current session                                   |
-| POST   | `/api/v1/auth/logout-all`         | Signed in   | Revoke every session of the user, including this one         |
-| POST   | `/api/v1/auth/change-password`    | Signed in   | Change password; signs out the user's other devices          |
-| POST   | `/api/v1/auth/delete-account`     | Signed in   | Delete the account and the recipes it wrote (needs password) |
-| GET    | `/api/v1/recipes`                 | Public      | List recipes (`?search=&cuisine=&authorId=&limit=&cursor=`)  |
-| GET    | `/api/v1/recipes/:id`             | Public      | Get one recipe                                               |
-| POST   | `/api/v1/recipes`                 | Signed in   | Create a recipe; you become its author                       |
-| PATCH  | `/api/v1/recipes/:id`             | Author only | Update your recipe                                           |
-| DELETE | `/api/v1/recipes/:id`             | Author only | Delete your recipe                                           |
-| GET    | `/api/v1/profiles/:userId`        | Public      | A user's public profile                                      |
-| GET    | `/api/v1/profiles/me`             | Signed in   | Your own profile                                             |
-| PATCH  | `/api/v1/profiles/me`             | Signed in   | Edit your display name and bio                               |
-| GET    | `/api/v1/saved-recipes`           | Signed in   | Your saved recipes, most recently saved first                |
-| PUT    | `/api/v1/saved-recipes/:recipeId` | Signed in   | Save a recipe (safe to repeat)                               |
-| DELETE | `/api/v1/saved-recipes/:recipeId` | Signed in   | Unsave a recipe (safe to repeat)                             |
-| GET    | `/api/v1/discover/recipes`        | Public      | Recipes ranked by the `?ingredients=` a user has             |
-| PUT    | `/api/v1/recipes/:id/photo`       | Author only | Upload or replace the recipe photo (multipart `photo`)       |
-| DELETE | `/api/v1/recipes/:id/photo`       | Author only | Remove the recipe photo                                      |
-| PUT    | `/api/v1/profiles/me/photo`       | Signed in   | Upload or replace your profile photo (multipart `photo`)     |
-| DELETE | `/api/v1/profiles/me/photo`       | Signed in   | Remove your profile photo                                    |
-| GET    | `/api/v1/images/:id/:size`        | Public      | An image file (`small` or `large`, WebP, cached forever)     |
+| Method | Path                                 | Access      | Description                                                  |
+| ------ | ------------------------------------ | ----------- | ------------------------------------------------------------ |
+| GET    | `/api/health`                        | Public      | Liveness and database connectivity                           |
+| POST   | `/api/v1/auth/register`              | Public      | Create an account and sign in                                |
+| POST   | `/api/v1/auth/login`                 | Public      | Sign in with email and password                              |
+| GET    | `/api/v1/auth/me`                    | Signed in   | Current user                                                 |
+| POST   | `/api/v1/auth/logout`                | Signed in   | Revoke the current session                                   |
+| POST   | `/api/v1/auth/logout-all`            | Signed in   | Revoke every session of the user, including this one         |
+| POST   | `/api/v1/auth/change-password`       | Signed in   | Change password; signs out the user's other devices          |
+| POST   | `/api/v1/auth/delete-account`        | Signed in   | Delete the account and the recipes it wrote (needs password) |
+| GET    | `/api/v1/recipes`                    | Public      | List recipes (`?search=&cuisine=&authorId=&limit=&cursor=`)  |
+| GET    | `/api/v1/recipes/:id`                | Public      | Get one recipe                                               |
+| POST   | `/api/v1/recipes`                    | Signed in   | Create a recipe; you become its author                       |
+| PATCH  | `/api/v1/recipes/:id`                | Author only | Update your recipe                                           |
+| DELETE | `/api/v1/recipes/:id`                | Author only | Delete your recipe                                           |
+| GET    | `/api/v1/profiles/:userId`           | Public      | A user's public profile                                      |
+| GET    | `/api/v1/profiles/me`                | Signed in   | Your own profile                                             |
+| PATCH  | `/api/v1/profiles/me`                | Signed in   | Edit your display name and bio                               |
+| GET    | `/api/v1/saved-recipes`              | Signed in   | Your saved recipes, most recently saved first                |
+| PUT    | `/api/v1/saved-recipes/:recipeId`    | Signed in   | Save a recipe (safe to repeat)                               |
+| DELETE | `/api/v1/saved-recipes/:recipeId`    | Signed in   | Unsave a recipe (safe to repeat)                             |
+| GET    | `/api/v1/discover/recipes`           | Public      | Recipes ranked by the `?ingredients=` a user has             |
+| PUT    | `/api/v1/recipes/:id/photo`          | Author only | Upload or replace the recipe photo (multipart `photo`)       |
+| DELETE | `/api/v1/recipes/:id/photo`          | Author only | Remove the recipe photo                                      |
+| PUT    | `/api/v1/profiles/me/photo`          | Signed in   | Upload or replace your profile photo (multipart `photo`)     |
+| DELETE | `/api/v1/profiles/me/photo`          | Signed in   | Remove your profile photo                                    |
+| GET    | `/api/v1/images/:id/:size`           | Public      | An image file (`small` or `large`, WebP, cached forever)     |
+| PUT    | `/api/v1/profiles/:userId/follow`    | Signed in   | Follow a user (safe to repeat; not yourself)                 |
+| DELETE | `/api/v1/profiles/:userId/follow`    | Signed in   | Unfollow a user (safe to repeat)                             |
+| GET    | `/api/v1/profiles/:userId/followers` | Public      | Who follows the user, newest first                           |
+| GET    | `/api/v1/profiles/:userId/following` | Public      | Who the user follows, newest first                           |
+| GET    | `/api/v1/feed`                       | Signed in   | Recipes by the people you follow, newest first               |
 
 "Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
 session. "Author only" routes also answer **403** when the recipe belongs to someone else.

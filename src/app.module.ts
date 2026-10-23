@@ -7,6 +7,8 @@ import { validateEnv } from './config/env.validation.js';
 import { PrismaModule } from './database/prisma.module.js';
 import { AuthModule } from './features/auth/auth.module.js';
 import { DiscoverModule } from './features/discover/discover.module.js';
+import { FeedModule } from './features/feed/feed.module.js';
+import { FollowsModule } from './features/follows/follows.module.js';
 import { HealthModule } from './features/health/health.module.js';
 import { ImagesModule } from './features/images/images.module.js';
 import { ProfilesModule } from './features/profiles/profiles.module.js';
@@ -28,6 +30,8 @@ import { StorageModule } from './storage/storage.module.js';
     // Feature modules
     AuthModule,
     DiscoverModule,
+    FeedModule,
+    FollowsModule,
     HealthModule,
     ImagesModule,
     ProfilesModule,

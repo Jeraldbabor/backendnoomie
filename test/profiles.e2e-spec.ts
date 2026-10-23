@@ -63,6 +63,9 @@ describe('Profiles (e2e)', () => {
       photo: null,
       createdAt: expect.any(String),
       recipeCount: 0,
+      followerCount: 0,
+      followingCount: 0,
+      followedByMe: false,
     });
     expect(res.body).not.toHaveProperty('email');
   });

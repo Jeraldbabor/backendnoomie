@@ -20,18 +20,22 @@ The photo has its own endpoints, `PUT` and `DELETE /api/v1/profiles/me/photo`; s
 [photos](photos.md#upload-a-photo).
 
 A user's recipes come from the recipe list: `GET /api/v1/recipes?authorId=<userId>`
-(see [recipes](recipes.md#list-recipes-get-apiv1recipes)).
+(see [recipes](recipes.md#list-recipes-get-apiv1recipes)). Following, followers and the
+feed are in [follows and feed](follows.md).
 
 ## The profile object
 
 ```json
 {
-  "id": "01a1622f-0ed0-74d2-9289-641b2988172d",
-  "displayName": "Ada L.",
-  "bio": "Home cook. Mostly noodles.",
+  "id": "01a167aa-191e-73df-8561-6cc34e5ff6fc",
+  "displayName": "Ben",
+  "bio": null,
+  "createdAt": "2026-10-23T07:29:23.230Z",
   "photo": null,
-  "createdAt": "2026-10-22T05:56:53.584Z",
-  "recipeCount": 1
+  "recipeCount": 1,
+  "followerCount": 1,
+  "followingCount": 0,
+  "followedByMe": true
 }
 ```
 
@@ -39,12 +43,18 @@ A user's recipes come from the recipe list: `GET /api/v1/recipes?authorId=<userI
 - `bio` is `null` when the user hasn't written one.
 - `createdAt` is when the account was created ("member since").
 - `recipeCount` counts the recipes this user authored.
+- `followerCount` and `followingCount` count who follows them and who they
+  [follow](follows.md).
+- `followedByMe` is `true` when the signed-in viewer follows this user. It's `false`
+  without a token, and on your own profile (you can't follow yourself).
 - `photo` is the user's [photo](photos.md#the-photo-object), or `null` when they haven't
   added one. Users upload and remove their own with `PUT` and `DELETE /api/v1/profiles/me/photo`.
 
 ## View a profile: `GET /api/v1/profiles/:userId`
 
 No sign-in needed. Use it for the author link on a recipe: `recipe.author.id` is the `userId`.
+**Send the token when the user is signed in** to get `followedByMe`. A token that is sent
+but invalid or expired gets **401** `Sign in to continue`, like on recipe reads.
 
 - **404** `Profile not found` if there is no such user.
 - **400** `Validation failed (uuid is expected)` if the ID isn't a valid UUID.
@@ -91,6 +101,9 @@ type Profile = {
   photo: Photo | null; // Photo: see photos.md
   createdAt: string;
   recipeCount: number;
+  followerCount: number;
+  followingCount: number;
+  followedByMe: boolean;
 };
 type ProfileUpdate = { displayName?: string; bio?: string | null };
 ```

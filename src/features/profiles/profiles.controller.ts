@@ -15,7 +15,10 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { AuthContext } from '../auth/auth.types.js';
 import { CurrentAuth } from '../auth/current-auth.decorator.js';
-import { SessionAuthGuard } from '../auth/session-auth.guard.js';
+import {
+  OptionalSessionAuthGuard,
+  SessionAuthGuard,
+} from '../auth/session-auth.guard.js';
 import { PhotoUpload, requirePhoto } from '../images/photo-upload.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { ProfilesService } from './profiles.service.js';
@@ -31,7 +34,7 @@ export class ProfilesController {
   @UseGuards(SessionAuthGuard)
   @ApiBearerAuth()
   findMine(@CurrentAuth() auth: AuthContext) {
-    return this.profilesService.findOne(auth.user.id);
+    return this.profilesService.findOne(auth.user.id, auth.user.id);
   }
 
   @Patch('me')
@@ -60,8 +63,14 @@ export class ProfilesController {
     return this.profilesService.removeOwnPhoto(auth.user.id);
   }
 
+  // Open to everyone; signed-in viewers also get followedByMe.
   @Get(':userId')
-  findOne(@Param('userId', ParseUUIDPipe) userId: string) {
-    return this.profilesService.findOne(userId);
+  @UseGuards(OptionalSessionAuthGuard)
+  @ApiBearerAuth()
+  findOne(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentAuth() auth: AuthContext | undefined,
+  ) {
+    return this.profilesService.findOne(userId, auth?.user.id);
   }
 }

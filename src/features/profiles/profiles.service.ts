@@ -2,7 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { ImagesService } from '../images/images.service.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
-import { profileSelect, ProfileView, toProfileView } from './profiles.types.js';
+import {
+  profileSelectFor,
+  ProfileView,
+  toProfileView,
+} from './profiles.types.js';
 
 @Injectable()
 export class ProfilesService {
@@ -11,10 +15,11 @@ export class ProfilesService {
     private readonly images: ImagesService,
   ) {}
 
-  async findOne(userId: string): Promise<ProfileView> {
+  /** `viewerId` is the signed-in user, if any; it only decides `followedByMe`. */
+  async findOne(userId: string, viewerId?: string): Promise<ProfileView> {
     const row = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: profileSelect,
+      select: profileSelectFor(viewerId),
     });
     if (!row) {
       throw new NotFoundException('Profile not found');
@@ -29,7 +34,7 @@ export class ProfilesService {
       where: { id: userId },
       // An empty bio clears it, stored as null like a bio that was never written.
       data: { displayName, bio: bio === undefined ? undefined : bio || null },
-      select: profileSelect,
+      select: profileSelectFor(userId),
     });
     return toProfileView(row);
   }

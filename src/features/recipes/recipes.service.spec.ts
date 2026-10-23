@@ -223,6 +223,25 @@ describe('RecipesService', () => {
     });
   });
 
+  describe('findFeed', () => {
+    it('lists recipes by the people the user follows, as that user sees them', async () => {
+      prisma.recipe.findMany.mockResolvedValue([row('b'), row('a')]);
+
+      const page = await service.findFeed('user-1', query({ limit: 5 }));
+
+      expect(page).toEqual({ data: [view('b'), view('a')], nextCursor: null });
+      expect(prisma.recipe.findMany).toHaveBeenCalledWith({
+        where: {
+          author: { followers: { some: { followerId: 'user-1' } } },
+          id: undefined,
+        },
+        orderBy: { id: 'desc' },
+        take: 6,
+        select: recipeSummarySelectFor('user-1'),
+      });
+    });
+  });
+
   describe('findOne', () => {
     it('returns the recipe as the viewer sees it', async () => {
       prisma.recipe.findUnique.mockResolvedValue(row('r1', true));

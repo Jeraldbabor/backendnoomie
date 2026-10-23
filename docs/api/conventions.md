@@ -19,7 +19,8 @@ the database is unreachable. It isn't rate-limited.
 - Send and receive **JSON**. Set `Content-Type: application/json` when there is a body.
   Photo uploads are the exception: they send `multipart/form-data` (see [photos](photos.md)).
 - Signed-in requests send `Authorization: Bearer <token>`. See [authentication](authentication.md).
-  Some public endpoints (recipe reads, Discover) also accept a token to personalize the response; if
+  Some public endpoints (recipe and profile reads, follower lists, Discover) also accept a
+  token to personalize the response; if
   you send one there, it must be valid, or you get 401.
 - **Only send the fields an endpoint documents.** Unknown fields are rejected with 400
   (`property X should not exist`). This is on purpose: for example, nobody can set a

@@ -17,6 +17,7 @@ read the backend code. Examples are based on real API responses.
 | Let users save recipes and see their saved list      | [Saved recipes](api/saved-recipes.md)                      |
 | Find recipes from the ingredients a user has         | [Discover](api/discover.md)                                |
 | Add, show, or remove recipe and profile photos       | [Photos](api/photos.md)                                    |
+| Follow people, list followers, show the feed         | [Follows and feed](api/follows.md)                         |
 | Call the API from the Noomie app's code              | [Noomie app integration](app-integration/noomie-app.md)    |
 | Ask for a new endpoint, or report a bug              | [Working together](team/working-together.md)               |
 | See what changed in the API                          | [Changelog](CHANGELOG.md)                                  |
@@ -40,6 +41,7 @@ docs/
 │   ├── saved-recipes.md
 │   ├── discover.md
 │   ├── photos.md
+│   ├── follows.md
 │   └── _template.md          template for documenting a new feature
 ├── app-integration/          how the Noomie app's code should call the API
 │   └── noomie-app.md
@@ -54,33 +56,38 @@ docs/
 
 ## All endpoints
 
-| Method | Path                              | Who         | Reference                                      |
-| ------ | --------------------------------- | ----------- | ---------------------------------------------- |
-| GET    | `/api/health`                     | Anyone      | [Conventions](api/conventions.md#health-check) |
-| POST   | `/api/v1/auth/register`           | Anyone      | [Authentication](api/authentication.md)        |
-| POST   | `/api/v1/auth/login`              | Anyone      | [Authentication](api/authentication.md)        |
-| GET    | `/api/v1/auth/me`                 | Signed in   | [Authentication](api/authentication.md)        |
-| POST   | `/api/v1/auth/logout`             | Signed in   | [Authentication](api/authentication.md)        |
-| POST   | `/api/v1/auth/logout-all`         | Signed in   | [Authentication](api/authentication.md)        |
-| POST   | `/api/v1/auth/change-password`    | Signed in   | [Authentication](api/authentication.md)        |
-| POST   | `/api/v1/auth/delete-account`     | Signed in   | [Authentication](api/authentication.md)        |
-| GET    | `/api/v1/recipes`                 | Anyone      | [Recipes](api/recipes.md)                      |
-| GET    | `/api/v1/recipes/:id`             | Anyone      | [Recipes](api/recipes.md)                      |
-| POST   | `/api/v1/recipes`                 | Signed in   | [Recipes](api/recipes.md)                      |
-| PATCH  | `/api/v1/recipes/:id`             | Author only | [Recipes](api/recipes.md)                      |
-| DELETE | `/api/v1/recipes/:id`             | Author only | [Recipes](api/recipes.md)                      |
-| GET    | `/api/v1/profiles/:userId`        | Anyone      | [Profiles](api/profiles.md)                    |
-| GET    | `/api/v1/profiles/me`             | Signed in   | [Profiles](api/profiles.md)                    |
-| PATCH  | `/api/v1/profiles/me`             | Signed in   | [Profiles](api/profiles.md)                    |
-| GET    | `/api/v1/saved-recipes`           | Signed in   | [Saved recipes](api/saved-recipes.md)          |
-| PUT    | `/api/v1/saved-recipes/:recipeId` | Signed in   | [Saved recipes](api/saved-recipes.md)          |
-| GET    | `/api/v1/discover/recipes`        | Anyone      | [Discover](api/discover.md)                    |
-| PUT    | `/api/v1/recipes/:id/photo`       | Author only | [Photos](api/photos.md)                        |
-| DELETE | `/api/v1/recipes/:id/photo`       | Author only | [Photos](api/photos.md)                        |
-| PUT    | `/api/v1/profiles/me/photo`       | Signed in   | [Photos](api/photos.md)                        |
-| DELETE | `/api/v1/profiles/me/photo`       | Signed in   | [Photos](api/photos.md)                        |
-| GET    | `/api/v1/images/:id/:size`        | Anyone      | [Photos](api/photos.md)                        |
-| DELETE | `/api/v1/saved-recipes/:recipeId` | Signed in   | [Saved recipes](api/saved-recipes.md)          |
+| Method | Path                                 | Who         | Reference                                      |
+| ------ | ------------------------------------ | ----------- | ---------------------------------------------- |
+| GET    | `/api/health`                        | Anyone      | [Conventions](api/conventions.md#health-check) |
+| POST   | `/api/v1/auth/register`              | Anyone      | [Authentication](api/authentication.md)        |
+| POST   | `/api/v1/auth/login`                 | Anyone      | [Authentication](api/authentication.md)        |
+| GET    | `/api/v1/auth/me`                    | Signed in   | [Authentication](api/authentication.md)        |
+| POST   | `/api/v1/auth/logout`                | Signed in   | [Authentication](api/authentication.md)        |
+| POST   | `/api/v1/auth/logout-all`            | Signed in   | [Authentication](api/authentication.md)        |
+| POST   | `/api/v1/auth/change-password`       | Signed in   | [Authentication](api/authentication.md)        |
+| POST   | `/api/v1/auth/delete-account`        | Signed in   | [Authentication](api/authentication.md)        |
+| GET    | `/api/v1/recipes`                    | Anyone      | [Recipes](api/recipes.md)                      |
+| GET    | `/api/v1/recipes/:id`                | Anyone      | [Recipes](api/recipes.md)                      |
+| POST   | `/api/v1/recipes`                    | Signed in   | [Recipes](api/recipes.md)                      |
+| PATCH  | `/api/v1/recipes/:id`                | Author only | [Recipes](api/recipes.md)                      |
+| DELETE | `/api/v1/recipes/:id`                | Author only | [Recipes](api/recipes.md)                      |
+| GET    | `/api/v1/profiles/:userId`           | Anyone      | [Profiles](api/profiles.md)                    |
+| GET    | `/api/v1/profiles/me`                | Signed in   | [Profiles](api/profiles.md)                    |
+| PATCH  | `/api/v1/profiles/me`                | Signed in   | [Profiles](api/profiles.md)                    |
+| GET    | `/api/v1/saved-recipes`              | Signed in   | [Saved recipes](api/saved-recipes.md)          |
+| PUT    | `/api/v1/saved-recipes/:recipeId`    | Signed in   | [Saved recipes](api/saved-recipes.md)          |
+| GET    | `/api/v1/discover/recipes`           | Anyone      | [Discover](api/discover.md)                    |
+| PUT    | `/api/v1/recipes/:id/photo`          | Author only | [Photos](api/photos.md)                        |
+| DELETE | `/api/v1/recipes/:id/photo`          | Author only | [Photos](api/photos.md)                        |
+| PUT    | `/api/v1/profiles/me/photo`          | Signed in   | [Photos](api/photos.md)                        |
+| DELETE | `/api/v1/profiles/me/photo`          | Signed in   | [Photos](api/photos.md)                        |
+| GET    | `/api/v1/images/:id/:size`           | Anyone      | [Photos](api/photos.md)                        |
+| PUT    | `/api/v1/profiles/:userId/follow`    | Signed in   | [Follows and feed](api/follows.md)             |
+| DELETE | `/api/v1/profiles/:userId/follow`    | Signed in   | [Follows and feed](api/follows.md)             |
+| GET    | `/api/v1/profiles/:userId/followers` | Anyone      | [Follows and feed](api/follows.md)             |
+| GET    | `/api/v1/profiles/:userId/following` | Anyone      | [Follows and feed](api/follows.md)             |
+| GET    | `/api/v1/feed`                       | Signed in   | [Follows and feed](api/follows.md)             |
+| DELETE | `/api/v1/saved-recipes/:recipeId`    | Signed in   | [Saved recipes](api/saved-recipes.md)          |
 
 Locally the API runs at `http://localhost:3000`.
 

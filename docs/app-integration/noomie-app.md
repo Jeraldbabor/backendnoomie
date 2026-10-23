@@ -208,6 +208,43 @@ export const discoverApi = {
 - **Avoid a request per keystroke:** search when a chip is added or removed, not while typing.
 - `{ data: [] }` is a normal empty state ("No recipes use these yet"), not an error.
 
+## Follows and the feed in the app
+
+The [follows and feed API](../api/follows.md), in `src/features/follows/api.ts`:
+
+```ts
+type Paging = { limit?: number; cursor?: string };
+
+export const followsApi = {
+  follow: (userId: string, token: string) =>
+    apiRequest<void>(`/profiles/${userId}/follow`, { method: 'PUT', token }),
+  unfollow: (userId: string, token: string) =>
+    apiRequest<void>(`/profiles/${userId}/follow`, { method: 'DELETE', token }),
+  followers: (userId: string, params: Paging, token?: string | null) =>
+    apiRequest<FollowPage>(`/profiles/${userId}/followers?${query(params)}`, {
+      token,
+    }),
+  following: (userId: string, params: Paging, token?: string | null) =>
+    apiRequest<FollowPage>(`/profiles/${userId}/following?${query(params)}`, {
+      token,
+    }),
+  feed: (params: Paging, token: string) =>
+    apiRequest<RecipePage>(`/feed?${query(params)}`, { token }),
+};
+```
+
+`apiRequest()`'s `method` type lists `GET`, `POST`, `PATCH` and `DELETE`; add `PUT` for
+`follow` (saving recipes needs it too).
+
+- **Follow button:** show it from `profile.followedByMe` (send the token on profile reads),
+  and hide it on your own profile. Update the button and `followerCount` right away, and
+  roll back if the request fails. Both calls are safe to repeat.
+- **Lists:** each row has `followedByMe`, so rows can have their own Follow buttons.
+- **Feed tab:** an empty feed is normal for new users; suggest recipes or people to follow.
+  Refresh it after following or unfollowing someone.
+- **A 401 on a profile read** now means the stored token is no longer valid. Sign out as
+  with any other 401.
+
 ## Photos in the app
 
 The [photos API](../api/photos.md) needs two small additions to `src/api/`, because

@@ -2,6 +2,24 @@
 
 Newest first. **Breaking** entries say what the app must change.
 
+## 2026-10-23: Follows and feed (not breaking; one read change to note)
+
+- New: `PUT` and `DELETE /api/v1/profiles/:userId/follow` (signed in). Both are safe to
+  repeat. Following yourself is 400.
+- New: `GET /api/v1/profiles/:userId/followers` and `/following` (anyone), paged, each row
+  with the person's name, photo and `followedByMe`.
+- New: `GET /api/v1/feed` (signed in): recipes by the people you follow, newest first,
+  paged, without steps.
+- Profiles have new fields: `followerCount`, `followingCount` and `followedByMe`.
+- `GET /api/v1/profiles/:userId` now reads the token when one is sent, for `followedByMe`.
+  **An invalid or expired token there now returns 401**; before, it was ignored. Requests
+  without a token are unchanged.
+- Deleting an account removes its follows both ways.
+
+**What the app can do:** add Follow buttons on profiles, follower and following lists, and a
+feed tab. If the app sends a token on profile reads, handle 401 there like elsewhere.
+Details: [follows and feed](api/follows.md).
+
 ## 2026-10-23: Photos (not breaking)
 
 - New: `PUT` and `DELETE /api/v1/recipes/:id/photo` (author only), and `PUT` and

@@ -32,6 +32,10 @@ model User {
   recipes      Recipe[]
   savedRecipes SavedRecipe[]
   images       Image[]       @relation("ImageOwner")
+  /// Follows where this user is the follower (who they follow).
+  following    Follow[]      @relation("FollowFollower")
+  /// Follows where this user is followed (their followers).
+  followers    Follow[]      @relation("FollowFollowed")
 
   @@map("users")
 }
@@ -119,6 +123,24 @@ model RecipeIngredient {
   @@id([recipeId, position])
   @@index([matchKey])
   @@map("recipe_ingredients")
+}
+
+/// One user following another. Public: anyone can see who follows whom. Deleting either
+/// account deletes the follow. A user can't follow themselves (checked in FollowsService and
+/// by the follows_not_self check constraint).
+model Follow {
+  /// Time-ordered, so follower lists page newest-first with a stable cursor.
+  id         String   @id @default(uuid(7)) @db.Uuid
+  followerId String   @map("follower_id") @db.Uuid
+  follower   User     @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  followedId String   @map("followed_id") @db.Uuid
+  followed   User     @relation("FollowFollowed", fields: [followedId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([followerId, followedId])
+  @@index([followerId, id])
+  @@index([followedId, id])
+  @@map("follows")
 }
 
 /// A user's bookmark. It references the original recipe (never a copy), so the author's
