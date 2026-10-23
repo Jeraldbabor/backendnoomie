@@ -160,6 +160,10 @@ Each ingredient:
 | `unit`     | Optional. One of the [units](#units)                                                     |
 | `note`     | Optional, up to 100 characters, trimmed. An empty note is saved as `null`                |
 
+**Keep `name` to the ingredient itself** (`tomatoes`, not `ripe chopped tomatoes`) and put
+the rest in `note` (`ripe, chopped`). [Discover](discover.md#how-matching-works) matches
+users' ingredients against `name`, so extra words stop a recipe from being found.
+
 Leave optional fields out or send `null`; both mean "none". Ingredients can't have other
 fields.
 

@@ -18,7 +18,7 @@ the database is unreachable. It isn't rate-limited.
 
 - Send and receive **JSON**. Set `Content-Type: application/json` when there is a body.
 - Signed-in requests send `Authorization: Bearer <token>`. See [authentication](authentication.md).
-  Some public endpoints (recipe reads) also accept a token to personalize the response; if
+  Some public endpoints (recipe reads, Discover) also accept a token to personalize the response; if
   you send one there, it must be valid, or you get 401.
 - **Only send the fields an endpoint documents.** Unknown fields are rejected with 400
   (`property X should not exist`). This is on purpose: for example, nobody can set a
@@ -87,6 +87,9 @@ List endpoints use **cursor paging**:
 - For the next page, send `?cursor=<nextCursor>` with the same filters.
 - `nextCursor: null` means there are no more pages.
 - Items are newest first. New items added while scrolling don't cause duplicates.
+
+[Discover](discover.md) is the exception: its results are ranked by how well they match, so
+it returns one page of the best matches (`{ data }`, no `nextCursor`).
 
 ## Rate limits
 

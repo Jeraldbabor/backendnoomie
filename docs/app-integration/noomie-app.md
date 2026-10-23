@@ -173,6 +173,41 @@ export const savedRecipesApi = {
 - **A 401 from a recipe read** now means the stored token is no longer valid. Sign out as
   with any other 401.
 
+## Discover in the app
+
+The [Discover API](../api/discover.md), in `src/features/discover/api.ts`:
+
+```ts
+export const discoverApi = {
+  // Pass the token when signed in, so savedByMe is filled in.
+  recipes: (
+    params: {
+      ingredients: string[];
+      cuisine?: string;
+      maxMinutes?: number;
+      maxMissing?: number;
+      limit?: number;
+    },
+    token?: string | null,
+  ) =>
+    apiRequest<DiscoverResult>(
+      `/discover/recipes?${query({ ...params, ingredients: params.ingredients.join(',') })}`,
+      { token },
+    ),
+};
+```
+
+`query()` is the helper from the recipes sketch above; it URL-encodes each value.
+
+- **Collect ingredients as chips** (one per name), and don't send a request until there is
+  at least one. A name containing a comma would be split in two, so remove commas from chips.
+- **Show `match.missing`** under each result ("Missing: basil"), and a "Ready to cook" badge
+  when it's empty. A "Can cook now" filter is `maxMissing: 0`.
+- **Results are one page.** There is no `nextCursor`; show the list as it comes.
+- **Opening a result** loads the full recipe with `recipesApi.get(id)` for its steps.
+- **Avoid a request per keystroke:** search when a chip is added or removed, not while typing.
+- `{ data: [] }` is a normal empty state ("No recipes use these yet"), not an error.
+
 ## Account settings in the app
 
 The [account settings endpoints](../api/authentication.md#account-settings) belong in the
