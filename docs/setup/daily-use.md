@@ -13,7 +13,7 @@ Run these in the `backendnoomie` folder. First-time setup is in [run the backend
 | Load or refresh the sample recipes      | `docker compose run --rm migrate npx prisma db seed`  |
 | Wipe your local database and start over | `docker compose down -v`, then `docker compose up -d` |
 
-`docker compose down -v` deletes all accounts and recipes **on your computer only**.
+`docker compose down -v` deletes all accounts, recipes and photos **on your computer only**.
 
 ## After pulling backend changes
 
@@ -35,7 +35,8 @@ ones to the latest content. Recipes created by users are never touched.
   http://localhost:3000/api/health and start it with `docker compose up -d`.
 - **`docker compose` fails with "set in .env":** the `.env` file is missing. Run
   `cp .env.example .env`.
-- **Port 3000 or 5433 is already in use:** change `API_PORT` or `POSTGRES_PORT` in `.env`.
+- **Port 3000, 5433 or 8333 is already in use:** change `API_PORT`, `POSTGRES_PORT` or
+  `STORAGE_PORT` in `.env`.
   If you change `POSTGRES_PORT`, change the port in `DATABASE_URL` too. If you change
   `API_PORT`, start the app with `NOOMIE_API_PROXY_TARGET=http://127.0.0.1:<port>`.
 - **The API behaves like an older version after `git pull`:** run

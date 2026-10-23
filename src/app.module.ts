@@ -8,9 +8,11 @@ import { PrismaModule } from './database/prisma.module.js';
 import { AuthModule } from './features/auth/auth.module.js';
 import { DiscoverModule } from './features/discover/discover.module.js';
 import { HealthModule } from './features/health/health.module.js';
+import { ImagesModule } from './features/images/images.module.js';
 import { ProfilesModule } from './features/profiles/profiles.module.js';
 import { RecipesModule } from './features/recipes/recipes.module.js';
 import { SavedRecipesModule } from './features/saved-recipes/saved-recipes.module.js';
+import { StorageModule } from './storage/storage.module.js';
 
 @Module({
   imports: [
@@ -22,10 +24,12 @@ import { SavedRecipesModule } from './features/saved-recipes/saved-recipes.modul
     // Baseline rate limit per client IP and route; features can tighten it with @Throttle.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
+    StorageModule,
     // Feature modules
     AuthModule,
     DiscoverModule,
     HealthModule,
+    ImagesModule,
     ProfilesModule,
     RecipesModule,
     SavedRecipesModule,

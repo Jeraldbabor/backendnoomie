@@ -6,6 +6,7 @@ import {
 import { CursorPage } from '../../common/dto/cursor-pagination-query.dto.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { Prisma } from '../../generated/prisma/client.js';
+import { ImagesService } from '../images/images.service.js';
 import { CreateRecipeDto } from './dto/create-recipe.dto.js';
 import { ListRecipesQueryDto } from './dto/list-recipes-query.dto.js';
 import { UpdateRecipeDto } from './dto/update-recipe.dto.js';
@@ -20,7 +21,10 @@ import {
 
 @Injectable()
 export class RecipesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly images: ImagesService,
+  ) {}
 
   /** `authorId` comes from the verified session, never from the request body. */
   async create(dto: CreateRecipeDto, authorId: string): Promise<RecipeView> {
@@ -119,19 +123,68 @@ export class RecipesService {
     return toRecipeView(recipe);
   }
 
+  /** Deletes the recipe and its photo. */
   async remove(id: string, userId: string): Promise<void> {
-    await this.assertAuthor(id, userId);
+    const { photoId } = await this.assertAuthor(id, userId);
     await this.prisma.recipe.delete({ where: { id } });
+    await this.images.delete([photoId]);
+  }
+
+  /** Sets or replaces the recipe's photo; the previous one is deleted. */
+  async setPhoto(
+    id: string,
+    data: Buffer,
+    userId: string,
+  ): Promise<RecipeView> {
+    await this.assertAuthor(id, userId);
+    const image = await this.images.create(userId, 'recipe', data);
+    let previous: string | null;
+    try {
+      previous = await this.swapPhoto(id, image.id);
+    } catch (error) {
+      await this.images.delete([image.id]);
+      throw error;
+    }
+    await this.images.delete([previous]);
+    return this.findOne(id, userId);
+  }
+
+  /** Removes the recipe's photo. Safe to repeat. */
+  async removePhoto(id: string, userId: string): Promise<void> {
+    await this.assertAuthor(id, userId);
+    await this.images.delete([await this.swapPhoto(id, null)]);
+  }
+
+  /**
+   * Points the recipe at `photoId` and returns the photo it replaced. The row is locked, so
+   * two uploads at once can't both replace the same photo and leave one image unreferenced.
+   */
+  private swapPhoto(
+    id: string,
+    photoId: string | null,
+  ): Promise<string | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const [row] = await tx.$queryRaw<{ photo_id: string | null }[]>`
+        SELECT photo_id FROM recipes WHERE id = ${id}::uuid FOR UPDATE`;
+      if (!row) {
+        throw new NotFoundException(`Recipe ${id} not found`);
+      }
+      await tx.recipe.update({ where: { id }, data: { photoId } });
+      return row.photo_id;
+    });
   }
 
   /**
    * Only a recipe's author may change it. Editorial recipes have no author, so nobody can
    * change them through the API. The author never changes, so this check stays valid.
    */
-  private async assertAuthor(id: string, userId: string): Promise<void> {
+  private async assertAuthor(
+    id: string,
+    userId: string,
+  ): Promise<{ photoId: string | null }> {
     const recipe = await this.prisma.recipe.findUnique({
       where: { id },
-      select: { authorId: true },
+      select: { authorId: true, photoId: true },
     });
     if (!recipe) {
       throw new NotFoundException(`Recipe ${id} not found`);
@@ -139,5 +192,6 @@ export class RecipesService {
     if (recipe.authorId !== userId) {
       throw new ForbiddenException('Only the recipe author can change it');
     }
+    return { photoId: recipe.photoId };
   }
 }

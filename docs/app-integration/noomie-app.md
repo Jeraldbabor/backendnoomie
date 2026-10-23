@@ -208,6 +208,90 @@ export const discoverApi = {
 - **Avoid a request per keystroke:** search when a chip is added or removed, not while typing.
 - `{ data: [] }` is a normal empty state ("No recipes use these yet"), not an error.
 
+## Photos in the app
+
+The [photos API](../api/photos.md) needs two small additions to `src/api/`, because
+`apiRequest()` only sends JSON.
+
+**Showing a photo.** Photo URLs are paths on the API. Resolve them against the API URL and
+show them with `expo-image` (already installed):
+
+```ts
+// src/api/config.ts
+export const imageUrl = (path: string) => new URL(path, apiUrl).toString();
+```
+
+```tsx
+<Image
+  source={{ uri: imageUrl(recipe.photo.small) }}
+  style={{ aspectRatio: recipe.photo.width / recipe.photo.height }}
+/>
+```
+
+- Use `small` in lists, cards and avatars, and `large` on the recipe or profile screen.
+- `width / height` gives the aspect ratio, so the layout doesn't jump when the image loads.
+- When `photo` is `null`, show a placeholder (an editorial or author-less recipe often has
+  none). A 404 for an image means it was replaced or deleted: show the placeholder too.
+- Files never change, so `expo-image`'s default caching is right.
+
+**Uploading a photo.** Send `multipart/form-data` with the file in the field `photo`:
+
+```ts
+// src/api/upload.ts
+import { Platform } from 'react-native';
+import { apiUrl } from '@/api/config';
+import { networkError, toApiError } from '@/api/errors';
+
+type LocalFile = { uri: string; name: string; type: string };
+
+/** PUT a photo to the Noomie API. Throws ApiError like apiRequest(). */
+export async function uploadPhoto<T>(
+  path: string,
+  file: LocalFile,
+  token: string,
+): Promise<T> {
+  const body = new FormData();
+  if (Platform.OS === 'web') {
+    body.append('photo', await (await fetch(file.uri)).blob(), file.name);
+  } else {
+    // React Native's FormData takes { uri, name, type } for a file on the device.
+    body.append('photo', file as unknown as Blob);
+  }
+  let response: Response;
+  try {
+    // No Content-Type header: fetch adds it, with the multipart boundary.
+    response = await fetch(`${apiUrl}${path}`, {
+      method: 'PUT',
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+      body,
+    });
+  } catch {
+    throw networkError();
+  }
+  const json: unknown = await response.json().catch(() => null);
+  if (!response.ok) throw toApiError(response.status, json);
+  return json as T;
+}
+```
+
+Then `uploadPhoto<Recipe>(`/recipes/${id}/photo`, file, token)` or
+`uploadPhoto<Profile>('/profiles/me/photo', file, token)`. Removing is a normal
+`apiRequest<void>(..., { method: 'DELETE', token })`.
+
+- **Picking:** `expo-image-picker` (not installed yet; add it with `npx expo install
+expo-image-picker`). Ask for images only.
+- **Shrink and convert before uploading** with `expo-image-manipulator` (also
+  `npx expo install`): resize to about 2000 pixels on the long side and save as **JPEG**.
+  This makes uploads fast on mobile data and turns iPhone **HEIC** photos into JPEG, which the
+  API requires. The server makes the final sizes and removes location data either way.
+- **Timeouts:** an upload on a slow connection can take longer than `apiRequest()`'s 15
+  seconds, so `uploadPhoto` has no timeout; show progress or a spinner instead.
+- **Errors:** 400 and 413 messages about the format or size are user-friendly. 403 means
+  it's not the user's recipe.
+- In development this works through the Expo dev server and `npm run tunnel` like every other
+  API call: the `/api` forwarding in `metro.config.js` passes uploads and image files
+  through unchanged.
+
 ## Account settings in the app
 
 The [account settings endpoints](../api/authentication.md#account-settings) belong in the

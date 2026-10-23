@@ -68,6 +68,7 @@ Returns **200** with the best matches:
           },
           { "name": "salt", "quantity": null, "unit": null, "note": "to taste" }
         ],
+        "photo": null,
         "createdAt": "2026-10-21T03:16:28.654Z",
         "updatedAt": "2026-10-23T05:52:21.210Z",
         "author": null,

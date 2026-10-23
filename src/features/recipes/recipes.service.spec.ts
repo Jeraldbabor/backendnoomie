@@ -1,5 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../database/prisma.service.js';
+import type { ImagesService } from '../images/images.service.js';
+import { imageSelect } from '../images/images.types.js';
 import { ListRecipesQueryDto } from './dto/list-recipes-query.dto.js';
 import { RecipesService } from './recipes.service.js';
 import type { CreateRecipeDto } from './dto/create-recipe.dto.js';
@@ -22,16 +24,24 @@ const fields = (id: string) => ({
   steps: ['Squeeze the lemon.'],
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
-  author: { id: 'author-1', displayName: 'Ada' },
 });
 /** A database row: `saves` holds the viewer's save, if any. */
 const row = (id: string, saved = false) => ({
   ...fields(id),
+  photo: { id: `photo-${id}`, width: 1600, height: 1200 },
+  author: { id: 'author-1', displayName: 'Ada', photo: null },
   saves: saved ? [{ id: 'save-1' }] : [],
 });
-/** What the API returns for that row. */
+/** What the API returns for that row: image URLs instead of image rows. */
 const view = (id: string, savedByMe = false): RecipeView => ({
   ...fields(id),
+  photo: {
+    small: `/api/v1/images/photo-${id}/small`,
+    large: `/api/v1/images/photo-${id}/large`,
+    width: 1600,
+    height: 1200,
+  },
+  author: { id: 'author-1', displayName: 'Ada', photo: null },
   savedByMe,
 });
 
@@ -47,12 +57,17 @@ describe('RecipesService', () => {
       update: vi.fn(),
       delete: vi.fn(),
     },
+    $transaction: vi.fn(),
   };
+  const images = { create: vi.fn(), delete: vi.fn() };
   let service: RecipesService;
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new RecipesService(prisma as unknown as PrismaService);
+    service = new RecipesService(
+      prisma as unknown as PrismaService,
+      images as unknown as ImagesService,
+    );
   });
 
   describe('viewer-specific fields', () => {
@@ -71,6 +86,7 @@ describe('RecipesService', () => {
       expect(recipeSelect.author.select).toEqual({
         id: true,
         displayName: true,
+        photo: { select: imageSelect },
       });
     });
 
@@ -291,6 +307,96 @@ describe('RecipesService', () => {
       await expect(
         service.remove('missing', 'author-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('photos', () => {
+    /** A transaction client whose locked recipe row currently has `photoId`. */
+    const lockedRow = (photoId: string | null) => {
+      const tx = {
+        $queryRaw: vi.fn().mockResolvedValue([{ photo_id: photoId }]),
+        recipe: { update: vi.fn() },
+      };
+      prisma.$transaction.mockImplementation(
+        (run: (client: typeof tx) => unknown) => run(tx),
+      );
+      return tx;
+    };
+
+    it('replace the photo and delete the previous one', async () => {
+      prisma.recipe.findUnique
+        .mockResolvedValueOnce({ authorId: 'author-1', photoId: 'img-old' })
+        .mockResolvedValueOnce(row('r1'));
+      images.create.mockResolvedValue({ id: 'img-new', width: 1, height: 1 });
+      const tx = lockedRow('img-old');
+      const data = Buffer.from('jpeg');
+
+      await expect(service.setPhoto('r1', data, 'author-1')).resolves.toEqual(
+        view('r1'),
+      );
+
+      expect(images.create).toHaveBeenCalledWith('author-1', 'recipe', data);
+      expect(tx.recipe.update).toHaveBeenCalledWith({
+        where: { id: 'r1' },
+        data: { photoId: 'img-new' },
+      });
+      expect(images.delete).toHaveBeenCalledWith(['img-old']);
+    });
+
+    it('delete the new image when attaching it fails', async () => {
+      prisma.recipe.findUnique.mockResolvedValue({
+        authorId: 'author-1',
+        photoId: null,
+      });
+      images.create.mockResolvedValue({ id: 'img-new', width: 1, height: 1 });
+      prisma.$transaction.mockRejectedValue(new NotFoundException());
+
+      await expect(
+        service.setPhoto('r1', Buffer.from('jpeg'), 'author-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(images.delete).toHaveBeenCalledWith(['img-new']);
+    });
+
+    it('refuse other users before storing anything', async () => {
+      prisma.recipe.findUnique.mockResolvedValue({
+        authorId: 'author-1',
+        photoId: null,
+      });
+
+      await expect(
+        service.setPhoto('r1', Buffer.from('jpeg'), 'someone-else'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(images.create).not.toHaveBeenCalled();
+    });
+
+    it('remove the photo', async () => {
+      prisma.recipe.findUnique.mockResolvedValue({
+        authorId: 'author-1',
+        photoId: 'img-old',
+      });
+      const tx = lockedRow('img-old');
+
+      await service.removePhoto('r1', 'author-1');
+
+      expect(tx.recipe.update).toHaveBeenCalledWith({
+        where: { id: 'r1' },
+        data: { photoId: null },
+      });
+      expect(images.delete).toHaveBeenCalledWith(['img-old']);
+    });
+
+    it('go with the recipe when it is deleted', async () => {
+      prisma.recipe.findUnique.mockResolvedValue({
+        authorId: 'author-1',
+        photoId: 'img-1',
+      });
+
+      await service.remove('r1', 'author-1');
+
+      expect(prisma.recipe.delete).toHaveBeenCalledWith({
+        where: { id: 'r1' },
+      });
+      expect(images.delete).toHaveBeenCalledWith(['img-1']);
     });
   });
 });

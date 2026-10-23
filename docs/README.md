@@ -16,6 +16,7 @@ read the backend code. Examples are based on real API responses.
 | Show a user's profile, or let users edit their own   | [Profiles](api/profiles.md)                                |
 | Let users save recipes and see their saved list      | [Saved recipes](api/saved-recipes.md)                      |
 | Find recipes from the ingredients a user has         | [Discover](api/discover.md)                                |
+| Add, show, or remove recipe and profile photos       | [Photos](api/photos.md)                                    |
 | Call the API from the Noomie app's code              | [Noomie app integration](app-integration/noomie-app.md)    |
 | Ask for a new endpoint, or report a bug              | [Working together](team/working-together.md)               |
 | See what changed in the API                          | [Changelog](CHANGELOG.md)                                  |
@@ -38,6 +39,7 @@ docs/
 │   ├── profiles.md
 │   ├── saved-recipes.md
 │   ├── discover.md
+│   ├── photos.md
 │   └── _template.md          template for documenting a new feature
 ├── app-integration/          how the Noomie app's code should call the API
 │   └── noomie-app.md
@@ -73,6 +75,11 @@ docs/
 | GET    | `/api/v1/saved-recipes`           | Signed in   | [Saved recipes](api/saved-recipes.md)          |
 | PUT    | `/api/v1/saved-recipes/:recipeId` | Signed in   | [Saved recipes](api/saved-recipes.md)          |
 | GET    | `/api/v1/discover/recipes`        | Anyone      | [Discover](api/discover.md)                    |
+| PUT    | `/api/v1/recipes/:id/photo`       | Author only | [Photos](api/photos.md)                        |
+| DELETE | `/api/v1/recipes/:id/photo`       | Author only | [Photos](api/photos.md)                        |
+| PUT    | `/api/v1/profiles/me/photo`       | Signed in   | [Photos](api/photos.md)                        |
+| DELETE | `/api/v1/profiles/me/photo`       | Signed in   | [Photos](api/photos.md)                        |
+| GET    | `/api/v1/images/:id/:size`        | Anyone      | [Photos](api/photos.md)                        |
 | DELETE | `/api/v1/saved-recipes/:recipeId` | Signed in   | [Saved recipes](api/saved-recipes.md)          |
 
 Locally the API runs at `http://localhost:3000`.

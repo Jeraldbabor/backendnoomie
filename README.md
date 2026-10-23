@@ -7,6 +7,8 @@ REST API for the Noomie app.
 - **Prisma 7** ORM (`prisma-client` generator + `@prisma/adapter-pg` driver adapter)
 - Email + password auth with revocable sessions (scrypt hashes, bearer tokens)
 - Validation with `class-validator`, Swagger docs, Helmet, rate limiting, URI versioning
+- Photo uploads: `sharp` (resize, WebP, metadata stripped) into S3-compatible storage
+  (SeaweedFS in Docker locally)
 - Vitest unit and e2e tests, oxlint, Prettier
 
 **Frontend developers:** start with the [API guide in `docs/`](docs/README.md). It covers
@@ -31,6 +33,7 @@ backendnoomie/
 │   ├── app.setup.ts           # prefix, versioning, CORS, Swagger, Helmet (shared with e2e)
 │   ├── config/                # environment validation
 │   ├── database/              # PrismaModule (global) + PrismaService
+│   ├── storage/               # StorageModule (global): S3-compatible file storage
 │   ├── common/                # cross-feature building blocks: DTOs, filters, transforms
 │   ├── features/              # one folder per business feature
 │   │   ├── auth/              # sign-in, sessions, account settings; SessionAuthGuard
@@ -38,6 +41,7 @@ backendnoomie/
 │   │   ├── profiles/          # public profiles; edit your own via /profiles/me
 │   │   ├── saved-recipes/     # each user's private bookmarks of recipes
 │   │   ├── discover/          # recipes ranked by the ingredients a user has
+│   │   ├── images/            # photo processing, storage, and serving image files
 │   │   └── recipes/
 │   │       ├── dto/
 │   │       ├── recipes.controller.ts
@@ -47,7 +51,7 @@ backendnoomie/
 │   └── generated/prisma/      # generated Prisma Client (git-ignored)
 ├── test/                      # e2e tests
 ├── Dockerfile                 # multi-stage: deps → build → production
-└── docker-compose.yml         # postgres + migrate job + api
+└── docker-compose.yml         # postgres + storage + migrate job + api
 ```
 
 Each feature owns its controller, service, DTOs, and tests. It exposes only what it
@@ -61,7 +65,7 @@ Prerequisites: Node.js 22.12+, npm, Docker Desktop.
 ```bash
 npm install                 # also generates Prisma Client
 cp .env.example .env        # then set POSTGRES_PASSWORD and the matching DATABASE_URL
-npm run docker:db           # start PostgreSQL on localhost:5433
+npm run docker:db           # start PostgreSQL (localhost:5433) and storage (localhost:8333)
 npm run db:deploy           # apply migrations
 npm run db:seed             # optional sample recipes (safe to re-run; refreshes them)
 npm run start:dev           # API with hot reload on http://localhost:3000
@@ -79,13 +83,13 @@ together if needed.
 
 ```bash
 npm run docker:up           # docker compose up -d --build
-npm run docker:down         # stop containers (data is kept in the postgres-data volume)
-docker compose down -v      # stop and DELETE the database volume
+npm run docker:down         # stop containers (data is kept in the postgres-data and storage-data volumes)
+docker compose down -v      # stop and DELETE the database and storage volumes
 docker compose logs -f api
 ```
 
-`docker compose up` starts `postgres`, waits until it is healthy, runs the one-off
-`migrate` job (`prisma migrate deploy`), and starts `api` only if migrations succeed.
+`docker compose up` starts `postgres` and `storage`, waits until they are healthy, runs the
+one-off `migrate` job (`prisma migrate deploy`), and starts `api` only if migrations succeed.
 The API container runs the compiled build as the non-root `node` user, with production
 dependencies only.
 
@@ -113,6 +117,11 @@ dependencies only.
 | PUT    | `/api/v1/saved-recipes/:recipeId` | Signed in   | Save a recipe (safe to repeat)                               |
 | DELETE | `/api/v1/saved-recipes/:recipeId` | Signed in   | Unsave a recipe (safe to repeat)                             |
 | GET    | `/api/v1/discover/recipes`        | Public      | Recipes ranked by the `?ingredients=` a user has             |
+| PUT    | `/api/v1/recipes/:id/photo`       | Author only | Upload or replace the recipe photo (multipart `photo`)       |
+| DELETE | `/api/v1/recipes/:id/photo`       | Author only | Remove the recipe photo                                      |
+| PUT    | `/api/v1/profiles/me/photo`       | Signed in   | Upload or replace your profile photo (multipart `photo`)     |
+| DELETE | `/api/v1/profiles/me/photo`       | Signed in   | Remove your profile photo                                    |
+| GET    | `/api/v1/images/:id/:size`        | Public      | An image file (`small` or `large`, WebP, cached forever)     |
 
 "Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
 session. "Author only" routes also answer **403** when the recipe belongs to someone else.
@@ -121,6 +130,16 @@ A recipe has `servings`, ordered `steps`, and structured `ingredients`
 (`{ name, quantity, unit, note }`, stored one row each in `recipe_ingredients`, units from
 `INGREDIENT_UNITS`). Lists return recipes without `steps`; the single-recipe read, create and
 update return them. Editing `ingredients` or `steps` replaces the whole list.
+
+Photos (recipe and profile) are uploaded as `multipart/form-data` (field `photo`, up to
+10 MB, JPEG/PNG/WebP). `features/images` turns each upload into WebP files (`small`,
+`large`) with `sharp`, which also applies the camera orientation and drops all metadata
+(including GPS location), and stores them in the bucket under `images/<id>/<size>`. An
+`images` row holds the owner and size; `recipes.photo_id` and `users.photo_id` point at it.
+Replacing or removing a photo, deleting a recipe, and deleting an account delete the files
+too. `GET /api/v1/images/:id/:size` streams the files through the API, so the app reaches
+them through the same address as the API (including the Expo tunnel). Responses carry
+`photo: { small, large, width, height } | null` with URL paths built in `images.types.ts`.
 
 Discover matches ingredients on `recipe_ingredients.match_key`, which the **database** fills:
 the SQL function `ingredient_match_key(name)` (case, accents, punctuation, plural endings)
@@ -205,22 +224,27 @@ Then add the models to `schema.prisma`, run a migration, and register the module
 | `npm run lint`       | oxlint (type-aware)                                        |
 | `npm run format`     | Prettier                                                   |
 | `npm run db:*`       | Prisma generate / migrate / deploy / seed / reset / studio |
-| `npm run docker:*`   | `db` (database only), `up`, `down`                         |
+| `npm run docker:*`   | `db` (database and storage), `up`, `down`                  |
 
 ## Environment variables
 
 See `.env.example`. The app validates its variables at startup (`src/config/env.validation.ts`)
 and refuses to boot if they are invalid.
 
-| Variable           | Used by         | Notes                                         |
-| ------------------ | --------------- | --------------------------------------------- |
-| `NODE_ENV`         | API             | `development`, `production`, or `test`        |
-| `PORT`             | API             | Default `3000`                                |
-| `DATABASE_URL`     | API, Prisma CLI | URL-encode special characters in the password |
-| `CORS_ORIGINS`     | API             | Comma-separated; empty disables CORS          |
-| `SESSION_TTL_DAYS` | API             | Sign-in lifetime in days (default 30)         |
-| `POSTGRES_*`       | docker compose  | Credentials, database name, host port         |
-| `API_PORT`         | docker compose  | Host port for the API container               |
+| Variable                                   | Used by         | Notes                                                |
+| ------------------------------------------ | --------------- | ---------------------------------------------------- |
+| `NODE_ENV`                                 | API             | `development`, `production`, or `test`               |
+| `PORT`                                     | API             | Default `3000`                                       |
+| `DATABASE_URL`                             | API, Prisma CLI | URL-encode special characters in the password        |
+| `CORS_ORIGINS`                             | API             | Comma-separated; empty disables CORS                 |
+| `SESSION_TTL_DAYS`                         | API             | Sign-in lifetime in days (default 30)                |
+| `POSTGRES_*`                               | docker compose  | Credentials, database name, host port                |
+| `API_PORT`                                 | docker compose  | Host port for the API container                      |
+| `STORAGE_ENDPOINT`                         | API             | S3-compatible URL; empty for AWS S3                  |
+| `STORAGE_REGION`                           | API             | Default `us-east-1` (`auto` for Cloudflare R2)       |
+| `STORAGE_BUCKET`                           | API, compose    | Bucket for image files                               |
+| `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` | API, compose    | Storage credentials; compose has local-only defaults |
+| `STORAGE_PORT`                             | docker compose  | Host port for the storage container (8333)           |
 
 ## Notes
 
@@ -230,3 +254,8 @@ and refuses to boot if they are invalid.
   npm 10 ignores this field.
 - Prisma 7 does not read `.env` by itself. `prisma7.config.ts` loads it through `dotenv`.
 - Prisma 7's `migrate dev` no longer regenerates the client; the `postdb:migrate` script does.
+- Local storage is SeaweedFS (`weed mini`, pinned image), not MinIO: MinIO stopped publishing
+  its free Docker images in 2025 and is no longer maintained. The API only speaks the S3 API,
+  so production can use AWS S3, Cloudflare R2 or similar by changing `STORAGE_*`.
+- sharp's native library ships as optional `@img/*` packages. The Dockerfile's production
+  stage omits optional dependencies, so it copies `@img` from the `deps` stage.

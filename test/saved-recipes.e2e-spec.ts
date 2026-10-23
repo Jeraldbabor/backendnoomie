@@ -125,7 +125,7 @@ describe('Saved recipes (e2e)', () => {
       savedAt: expect.any(String),
       recipe: expect.objectContaining({
         id: recipeIds[0],
-        author: { id: ada.id, displayName: 'Ada' },
+        author: { id: ada.id, displayName: 'Ada', photo: null },
         savedByMe: true,
       }),
     });

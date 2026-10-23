@@ -194,7 +194,9 @@ describe('Noomie API (e2e)', () => {
       expect(created.author).toEqual({
         id: owner.id,
         displayName: 'Recipe Owner',
+        photo: null,
       });
+      expect(created.photo).toBeNull();
       // Lists carry ingredients but leave the steps to the single-recipe read.
       expect(created.ingredients).toHaveLength(2);
       expect(created).not.toHaveProperty('steps');

@@ -23,13 +23,36 @@ model User {
   bio          String?       @db.VarChar(160)
   /// scrypt hash with its parameters; never returned by the API.
   passwordHash String        @map("password_hash")
+  /// Public profile photo; null when none.
+  photoId      String?       @unique @map("photo_id") @db.Uuid
+  photo        Image?        @relation("UserPhoto", fields: [photoId], references: [id], onDelete: SetNull)
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   sessions     Session[]
   recipes      Recipe[]
   savedRecipes SavedRecipe[]
+  images       Image[]       @relation("ImageOwner")
 
   @@map("users")
+}
+
+/// An uploaded image. Its files (WebP, one per size) are in storage under images/<id>/, and
+/// ImagesService deletes them together with the row.
+model Image {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  /// Who uploaded it. Deleting the account deletes these rows (cascade); AuthService
+  /// deletes their files.
+  ownerId   String   @map("owner_id") @db.Uuid
+  owner     User     @relation("ImageOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  /// Size of the `large` file, in pixels; `small` has the same shape.
+  width     Int
+  height    Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  recipe    Recipe?
+  profileOf User?    @relation("UserPhoto")
+
+  @@index([ownerId])
+  @@map("images")
 }
 
 /// One signed-in device. The client holds a random token; only its SHA-256 hash is stored.
@@ -62,6 +85,9 @@ model Recipe {
   /// else may delete a user and leave their recipes behind.
   authorId    String?            @map("author_id") @db.Uuid
   author      User?              @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  /// Null when the recipe has no photo.
+  photoId     String?            @unique @map("photo_id") @db.Uuid
+  photo       Image?             @relation(fields: [photoId], references: [id], onDelete: SetNull)
   createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   saves       SavedRecipe[]

@@ -39,6 +39,7 @@ list (see [recipes](recipes.md#the-recipe-object)).
       { "name": "cucumber", "quantity": 1, "unit": null, "note": "diced" },
       { "name": "salt", "quantity": null, "unit": null, "note": "to taste" }
     ],
+    "photo": null,
     "createdAt": "2026-10-21T03:16:28.654Z",
     "updatedAt": "2026-10-23T02:50:01.849Z",
     "author": null,

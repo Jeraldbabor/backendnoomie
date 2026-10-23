@@ -19,7 +19,8 @@ const savedRow = (id: string) => ({
     ingredients: [{ name: 'water', quantity: 500, unit: 'ml', note: null }],
     createdAt: savedAt,
     updatedAt: savedAt,
-    author: { id: 'author-1', displayName: 'Ada' },
+    photo: null,
+    author: { id: 'author-1', displayName: 'Ada', photo: null },
     saves: [{ id }],
   },
 });
@@ -69,7 +70,8 @@ describe('SavedRecipesService', () => {
         savedAt,
         recipe: expect.objectContaining({
           id: 'recipe-s3',
-          author: { id: 'author-1', displayName: 'Ada' },
+          author: { id: 'author-1', displayName: 'Ada', photo: null },
+          photo: null,
           savedByMe: true,
         }),
       });
