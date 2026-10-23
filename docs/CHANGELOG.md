@@ -2,6 +2,22 @@
 
 Newest first. **Breaking** entries say what the app must change.
 
+## 2026-10-22: Account settings (not breaking)
+
+- New: `POST /api/v1/auth/change-password`. Needs the current password. The device that
+  changes it stays signed in; every other device is signed out.
+- New: `POST /api/v1/auth/logout-all` signs out every device, including the current one.
+- New: `POST /api/v1/auth/delete-account`. Needs the password. Permanently deletes the
+  account, its sessions and saved list, and every recipe the user wrote (which also leaves
+  other users' saved lists). The email can be registered again.
+- A wrong password on these endpoints returns **400**, not 401, so the app doesn't sign the
+  user out.
+- These endpoints share the auth rate limit: 10 requests per minute.
+
+**What the app can do:** add an account settings screen. After sign out everywhere or
+delete account, clear the local session. Nothing existing changed. Details:
+[account settings](api/authentication.md#account-settings).
+
 ## 2026-10-22: Saved recipes (not breaking; one read-endpoint change to note)
 
 - New: `GET /api/v1/saved-recipes`, `PUT` and `DELETE /api/v1/saved-recipes/:recipeId`

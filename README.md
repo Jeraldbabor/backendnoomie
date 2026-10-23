@@ -33,7 +33,7 @@ backendnoomie/
 │   ├── database/              # PrismaModule (global) + PrismaService
 │   ├── common/                # cross-feature building blocks: DTOs, filters, transforms
 │   ├── features/              # one folder per business feature
-│   │   ├── auth/              # register, login, me, logout; SessionAuthGuard
+│   │   ├── auth/              # sign-in, sessions, account settings; SessionAuthGuard
 │   │   ├── health/
 │   │   ├── profiles/          # public profiles; edit your own via /profiles/me
 │   │   ├── saved-recipes/     # each user's private bookmarks of recipes
@@ -90,24 +90,27 @@ dependencies only.
 
 ## Endpoints
 
-| Method | Path                              | Access      | Description                                                 |
-| ------ | --------------------------------- | ----------- | ----------------------------------------------------------- |
-| GET    | `/api/health`                     | Public      | Liveness and database connectivity                          |
-| POST   | `/api/v1/auth/register`           | Public      | Create an account and sign in                               |
-| POST   | `/api/v1/auth/login`              | Public      | Sign in with email and password                             |
-| GET    | `/api/v1/auth/me`                 | Signed in   | Current user                                                |
-| POST   | `/api/v1/auth/logout`             | Signed in   | Revoke the current session                                  |
-| GET    | `/api/v1/recipes`                 | Public      | List recipes (`?search=&cuisine=&authorId=&limit=&cursor=`) |
-| GET    | `/api/v1/recipes/:id`             | Public      | Get one recipe                                              |
-| POST   | `/api/v1/recipes`                 | Signed in   | Create a recipe; you become its author                      |
-| PATCH  | `/api/v1/recipes/:id`             | Author only | Update your recipe                                          |
-| DELETE | `/api/v1/recipes/:id`             | Author only | Delete your recipe                                          |
-| GET    | `/api/v1/profiles/:userId`        | Public      | A user's public profile                                     |
-| GET    | `/api/v1/profiles/me`             | Signed in   | Your own profile                                            |
-| PATCH  | `/api/v1/profiles/me`             | Signed in   | Edit your display name and bio                              |
-| GET    | `/api/v1/saved-recipes`           | Signed in   | Your saved recipes, most recently saved first               |
-| PUT    | `/api/v1/saved-recipes/:recipeId` | Signed in   | Save a recipe (safe to repeat)                              |
-| DELETE | `/api/v1/saved-recipes/:recipeId` | Signed in   | Unsave a recipe (safe to repeat)                            |
+| Method | Path                              | Access      | Description                                                  |
+| ------ | --------------------------------- | ----------- | ------------------------------------------------------------ |
+| GET    | `/api/health`                     | Public      | Liveness and database connectivity                           |
+| POST   | `/api/v1/auth/register`           | Public      | Create an account and sign in                                |
+| POST   | `/api/v1/auth/login`              | Public      | Sign in with email and password                              |
+| GET    | `/api/v1/auth/me`                 | Signed in   | Current user                                                 |
+| POST   | `/api/v1/auth/logout`             | Signed in   | Revoke the current session                                   |
+| POST   | `/api/v1/auth/logout-all`         | Signed in   | Revoke every session of the user, including this one         |
+| POST   | `/api/v1/auth/change-password`    | Signed in   | Change password; signs out the user's other devices          |
+| POST   | `/api/v1/auth/delete-account`     | Signed in   | Delete the account and the recipes it wrote (needs password) |
+| GET    | `/api/v1/recipes`                 | Public      | List recipes (`?search=&cuisine=&authorId=&limit=&cursor=`)  |
+| GET    | `/api/v1/recipes/:id`             | Public      | Get one recipe                                               |
+| POST   | `/api/v1/recipes`                 | Signed in   | Create a recipe; you become its author                       |
+| PATCH  | `/api/v1/recipes/:id`             | Author only | Update your recipe                                           |
+| DELETE | `/api/v1/recipes/:id`             | Author only | Delete your recipe                                           |
+| GET    | `/api/v1/profiles/:userId`        | Public      | A user's public profile                                      |
+| GET    | `/api/v1/profiles/me`             | Signed in   | Your own profile                                             |
+| PATCH  | `/api/v1/profiles/me`             | Signed in   | Edit your display name and bio                               |
+| GET    | `/api/v1/saved-recipes`           | Signed in   | Your saved recipes, most recently saved first                |
+| PUT    | `/api/v1/saved-recipes/:recipeId` | Signed in   | Save a recipe (safe to repeat)                               |
+| DELETE | `/api/v1/saved-recipes/:recipeId` | Signed in   | Unsave a recipe (safe to repeat)                             |
 
 "Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
 session. "Author only" routes also answer **403** when the recipe belongs to someone else.
@@ -115,8 +118,9 @@ session. "Author only" routes also answer **403** when the recipe belongs to som
 Recipes include `author: { id, displayName } | null`. The author is set from the signed-in
 user when the recipe is created and never changes; sending `authorId` is rejected (400).
 `null` marks a Noomie editorial recipe (the seed data), which nobody can edit through the
-API. An author's email never appears in recipe responses. A user who still has recipes
-cannot be deleted (foreign key `RESTRICT`) until an attribution policy is decided.
+API. An author's email never appears in recipe responses. Deleting an account
+(`delete-account`) deletes its recipes in the same transaction. The author foreign key stays
+`RESTRICT`, so no other code path can delete a user and leave their recipes behind.
 
 Lists use cursor pagination. The response is `{ data, nextCursor }`. Pass `nextCursor`
 back as `?cursor=` to get the next page; `null` means the last page. `limit` is 1–50
@@ -134,6 +138,9 @@ Login answers "Incorrect email or password" for both unknown emails and wrong pa
 and runs a password check either way, so the response doesn't reveal which accounts exist.
 Registering an existing email returns 409. Auth routes allow 10 requests per minute per IP
 and route; everything else allows 120.
+
+`change-password` and `delete-account` re-check the current password and answer **400** (not 401) when it's wrong, so the app doesn't treat it as an ended session. Changing the password
+revokes every other session; `logout-all` revokes all of them, including the caller's.
 
 To protect a route in another feature, import `AuthModule`, add
 `@UseGuards(SessionAuthGuard)`, and read the user with `@CurrentAuth()`. For a public route

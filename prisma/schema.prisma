@@ -54,7 +54,8 @@ model Recipe {
   ingredients String[]
   /// Set from the signed-in user when created, never from the request body, and never
   /// changed afterwards. Null for Noomie editorial recipes (seed data), which no user can edit.
-  /// Restrict: deleting a user with recipes needs an explicit attribution decision first.
+  /// Restrict: AuthService.deleteAccount deletes a user's recipes before the user; nothing
+  /// else may delete a user and leave their recipes behind.
   authorId    String?  @map("author_id") @db.Uuid
   author      User?    @relation(fields: [authorId], references: [id], onDelete: Restrict)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
