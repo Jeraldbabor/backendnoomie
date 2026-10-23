@@ -140,7 +140,9 @@ describe('Account management (e2e)', () => {
             title: 'E2E account soup',
             cuisine: `E2E account ${runId}`,
             minutes: 5,
-            ingredients: ['water'],
+            servings: 1,
+            ingredients: [{ name: 'water' }],
+            steps: ['Boil the water.'],
           })
           .expect(201)
       ).body.id;

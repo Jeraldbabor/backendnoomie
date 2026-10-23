@@ -2,6 +2,29 @@
 
 Newest first. **Breaking** entries say what the app must change.
 
+## 2026-10-23: Complete recipes (breaking for recipe create and edit, and recipe types)
+
+- Recipes have two new fields: `servings` (how many portions) and `steps` (the cooking
+  instructions, in order).
+- **`ingredients` changed from a list of texts to a list of objects**:
+  `{ name, quantity, unit, note }`. `quantity` is a number or `null`, `unit` is one of a
+  fixed list of [units](api/recipes.md#units) or `null`, and `note` is text or `null`.
+- `POST /api/v1/recipes` now **requires** `servings` (1–100), `steps` (1–50) and the new
+  ingredient objects. The old list of texts is rejected with 400. `PATCH` accepts the same
+  fields and replaces `ingredients` and `steps` as a whole.
+- **Lists no longer include `steps`**: `GET /api/v1/recipes` and the saved list return
+  recipes without them, to keep pages small. `GET /api/v1/recipes/:id`, create and edit
+  return the full recipe.
+- Existing recipes in your local database were converted: each old ingredient text became an
+  ingredient name, with 1 serving and no steps. Run
+  `docker compose run --rm migrate npx prisma db seed` to refresh the sample recipes with
+  full content; it no longer skips when recipes exist, and it never touches users' recipes.
+
+**What the app must change:** use the new `Ingredient`, `RecipeSummary` and `Recipe` types
+from [recipes](api/recipes.md#types); send `servings`, `steps` and ingredient objects when
+creating recipes; load `GET /api/v1/recipes/:id` for a recipe's steps. The app doesn't call
+recipe endpoints yet (its recipes are local previews), so nothing in it breaks today.
+
 ## 2026-10-22: Account settings (not breaking)
 
 - New: `POST /api/v1/auth/change-password`. Needs the current password. The device that

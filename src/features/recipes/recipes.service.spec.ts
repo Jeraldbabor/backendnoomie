@@ -2,9 +2,12 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../database/prisma.service.js';
 import { ListRecipesQueryDto } from './dto/list-recipes-query.dto.js';
 import { RecipesService } from './recipes.service.js';
+import type { CreateRecipeDto } from './dto/create-recipe.dto.js';
 import {
   recipeSelect,
   recipeSelectFor,
+  recipeSummarySelect,
+  recipeSummarySelectFor,
   type RecipeView,
 } from './recipes.types.js';
 
@@ -14,7 +17,9 @@ const fields = (id: string) => ({
   description: null,
   cuisine: 'Mediterranean',
   minutes: 20,
-  ingredients: ['lemon'],
+  servings: 2,
+  ingredients: [{ name: 'lemon', quantity: 1, unit: null, note: 'juiced' }],
+  steps: ['Squeeze the lemon.'],
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
   author: { id: 'author-1', displayName: 'Ada' },
@@ -68,24 +73,67 @@ describe('RecipesService', () => {
         displayName: true,
       });
     });
+
+    it('lists ingredients in recipe order, and steps only for one recipe', () => {
+      expect(recipeSelect.ingredients.orderBy).toEqual({ position: 'asc' });
+      expect(recipeSelect.steps).toBe(true);
+      expect(recipeSummarySelect).not.toHaveProperty('steps');
+    });
   });
 
   describe('create', () => {
+    const dto: CreateRecipeDto = {
+      title: 'Soup',
+      cuisine: 'Test',
+      minutes: 10,
+      servings: 2,
+      ingredients: [
+        { name: 'water', quantity: 500, unit: 'ml' },
+        { name: 'salt', note: '' },
+      ],
+      steps: ['Boil the water.', 'Add salt.'],
+    };
+
     it('sets the author from the signed-in user', async () => {
       prisma.recipe.create.mockResolvedValue(row('new'));
-      const dto = {
-        title: 'Soup',
-        cuisine: 'Test',
-        minutes: 10,
-        ingredients: ['water'],
-      };
 
       await expect(service.create(dto, 'author-1')).resolves.toEqual(
         view('new'),
       );
-      expect(prisma.recipe.create).toHaveBeenCalledWith({
-        data: { ...dto, authorId: 'author-1' },
-        select: recipeSelectFor('author-1'),
+      expect(prisma.recipe.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ authorId: 'author-1' }),
+          select: recipeSelectFor('author-1'),
+        }),
+      );
+    });
+
+    it('stores ingredients in the order sent, with blanks as null', async () => {
+      prisma.recipe.create.mockResolvedValue(row('new'));
+
+      await service.create(dto, 'author-1');
+
+      const { data } = prisma.recipe.create.mock.calls[0][0];
+      expect(data).toMatchObject({ servings: 2, steps: dto.steps });
+      expect(data.ingredients).toEqual({
+        createMany: {
+          data: [
+            {
+              position: 0,
+              name: 'water',
+              quantity: 500,
+              unit: 'ml',
+              note: null,
+            },
+            {
+              position: 1,
+              name: 'salt',
+              quantity: null,
+              unit: null,
+              note: null,
+            },
+          ],
+        },
       });
     });
   });
@@ -102,7 +150,7 @@ describe('RecipesService', () => {
         expect.objectContaining({
           take: 3,
           orderBy: { id: 'desc' },
-          select: recipeSelectFor(undefined),
+          select: recipeSummarySelectFor(undefined),
         }),
       );
     });
@@ -123,7 +171,7 @@ describe('RecipesService', () => {
       expect(page.data.map((r) => r.savedByMe)).toEqual([true, false]);
       expect(page.data[0]).not.toHaveProperty('saves');
       expect(prisma.recipe.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ select: recipeSelectFor('user-1') }),
+        expect.objectContaining({ select: recipeSummarySelectFor('user-1') }),
       );
     });
 
@@ -187,11 +235,32 @@ describe('RecipesService', () => {
 
       expect(prisma.recipe.update).toHaveBeenCalledWith({
         where: { id: 'r1' },
-        data: { minutes: 25 },
+        data: expect.objectContaining({ minutes: 25, ingredients: undefined }),
         select: recipeSelectFor('author-1'),
       });
       expect(prisma.recipe.delete).toHaveBeenCalledWith({
         where: { id: 'r1' },
+      });
+    });
+
+    it('replace the whole ingredient list when ingredients are sent', async () => {
+      prisma.recipe.findUnique.mockResolvedValue({ authorId: 'author-1' });
+      prisma.recipe.update.mockResolvedValue(row('r1'));
+
+      await service.update(
+        'r1',
+        { ingredients: [{ name: 'lime', quantity: 2 }] },
+        'author-1',
+      );
+
+      const { data } = prisma.recipe.update.mock.calls[0][0];
+      expect(data.ingredients).toEqual({
+        deleteMany: {},
+        createMany: {
+          data: [
+            { position: 0, name: 'lime', quantity: 2, unit: null, note: null },
+          ],
+        },
       });
     });
 

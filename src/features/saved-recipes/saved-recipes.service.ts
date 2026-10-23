@@ -5,7 +5,10 @@ import {
 } from '../../common/dto/cursor-pagination-query.dto.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
-import { recipeSelectFor, toRecipeView } from '../recipes/recipes.types.js';
+import {
+  recipeSummarySelectFor,
+  toRecipeView,
+} from '../recipes/recipes.types.js';
 import type { SavedRecipeView } from './saved-recipes.types.js';
 
 /** Every method acts on the signed-in user's own saves; there is no way to read others'. */
@@ -26,7 +29,7 @@ export class SavedRecipesService {
       select: {
         id: true,
         savedAt: true,
-        recipe: { select: recipeSelectFor(userId) },
+        recipe: { select: recipeSummarySelectFor(userId) },
       },
     });
 

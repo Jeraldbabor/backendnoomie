@@ -10,7 +10,7 @@ Run these in the `backendnoomie` folder. First-time setup is in [run the backend
 | Stop it (your data is kept)             | `docker compose down`                                 |
 | Check it's running                      | open http://localhost:3000/api/health                 |
 | See the API logs                        | `docker compose logs -f api`                          |
-| Load the sample recipes                 | `docker compose run --rm migrate npx prisma db seed`  |
+| Load or refresh the sample recipes      | `docker compose run --rm migrate npx prisma db seed`  |
 | Wipe your local database and start over | `docker compose down -v`, then `docker compose up -d` |
 
 `docker compose down -v` deletes all accounts and recipes **on your computer only**.
@@ -24,7 +24,10 @@ docker compose up -d --build
 
 The `--build` flag rebuilds the API with the new code. New database migrations are applied
 automatically every time the stack starts. Then read the [changelog](../CHANGELOG.md) for API
-changes the app may need to handle.
+changes the app may need to handle; it also says when to refresh the sample recipes.
+
+Loading the sample recipes is safe to repeat: it adds the missing ones and updates existing
+ones to the latest content. Recipes created by users are never touched.
 
 ## Troubleshooting
 

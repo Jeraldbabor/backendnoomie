@@ -33,7 +33,14 @@ describe('Saved recipes (e2e)', () => {
     const res = await api()
       .post('/api/v1/recipes')
       .set(auth(ada))
-      .send({ title, cuisine, minutes: 10, ingredients: ['water'] })
+      .send({
+        title,
+        cuisine,
+        minutes: 10,
+        servings: 1,
+        ingredients: [{ name: 'water' }],
+        steps: ['Boil the water.'],
+      })
       .expect(201);
     recipeIds.push(res.body.id);
     return res.body.id as string;
@@ -68,7 +75,14 @@ describe('Saved recipes (e2e)', () => {
       await createRecipe(title);
     }
     const editorial = await prisma.recipe.create({
-      data: { title: 'Editorial', cuisine, minutes: 5, ingredients: ['salt'] },
+      data: {
+        title: 'Editorial',
+        cuisine,
+        minutes: 5,
+        servings: 1,
+        steps: ['Season.'],
+        ingredients: { create: [{ position: 0, name: 'salt' }] },
+      },
     });
     editorialId = editorial.id;
   });

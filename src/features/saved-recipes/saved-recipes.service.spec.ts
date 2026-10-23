@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { CursorPaginationQueryDto } from '../../common/dto/cursor-pagination-query.dto.js';
 import type { PrismaService } from '../../database/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
-import { recipeSelectFor } from '../recipes/recipes.types.js';
+import { recipeSummarySelectFor } from '../recipes/recipes.types.js';
 import { SavedRecipesService } from './saved-recipes.service.js';
 
 const savedAt = new Date('2026-02-01T00:00:00Z');
@@ -15,7 +15,8 @@ const savedRow = (id: string) => ({
     description: null,
     cuisine: 'Test',
     minutes: 10,
-    ingredients: ['water'],
+    servings: 1,
+    ingredients: [{ name: 'water', quantity: 500, unit: 'ml', note: null }],
     createdAt: savedAt,
     updatedAt: savedAt,
     author: { id: 'author-1', displayName: 'Ada' },
@@ -58,7 +59,8 @@ describe('SavedRecipesService', () => {
         select: {
           id: true,
           savedAt: true,
-          recipe: { select: recipeSelectFor('user-1') },
+          // The saved list is a list: recipes without their steps.
+          recipe: { select: recipeSummarySelectFor('user-1') },
         },
       });
       expect(result.nextCursor).toBe('s2');

@@ -116,6 +116,15 @@ export const recipesApi = {
 
 Screens then call `recipesApi`, and handle loading, empty, error, and success states.
 
+- **List screens get `RecipeSummary` items** (no `steps`). The recipe screen calls
+  `recipesApi.get(id)` for the full `Recipe` with its steps.
+- **The app's preview recipes** (`src/features/preview/recipes.ts`) still use the old shape,
+  with `ingredients` as plain texts. When a screen switches to the API, show
+  `ingredient.name` where it showed the text, and build the line from `quantity`, `unit` and
+  `note` (for example "200 g spaghetti", "salt, to taste").
+- **Editing ingredients or steps** sends the whole list, even when one line changed; see
+  [edit a recipe](../api/recipes.md#edit-a-recipe-patch-apiv1recipesid-author-only).
+
 ## Profiles in the app
 
 The [profiles API](../api/profiles.md) fits the same pattern, in `src/features/profiles/api.ts`:

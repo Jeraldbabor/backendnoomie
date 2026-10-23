@@ -62,7 +62,7 @@ npm install                 # also generates Prisma Client
 cp .env.example .env        # then set POSTGRES_PASSWORD and the matching DATABASE_URL
 npm run docker:db           # start PostgreSQL on localhost:5433
 npm run db:deploy           # apply migrations
-npm run db:seed             # optional sample recipes
+npm run db:seed             # optional sample recipes (safe to re-run; refreshes them)
 npm run start:dev           # API with hot reload on http://localhost:3000
 ```
 
@@ -114,6 +114,11 @@ dependencies only.
 
 "Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
 session. "Author only" routes also answer **403** when the recipe belongs to someone else.
+
+A recipe has `servings`, ordered `steps`, and structured `ingredients`
+(`{ name, quantity, unit, note }`, stored one row each in `recipe_ingredients`, units from
+`INGREDIENT_UNITS`). Lists return recipes without `steps`; the single-recipe read, create and
+update return them. Editing `ingredients` or `steps` replaces the whole list.
 
 Recipes include `author: { id, displayName } | null`. The author is set from the signed-in
 user when the recipe is created and never changes; sending `authorId` is rejected (400).
