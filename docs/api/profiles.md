@@ -16,6 +16,9 @@ How to call these from the Noomie app: [app integration](../app-integration/noom
 | GET    | `/api/v1/profiles/me`      | Signed in | 200     |
 | PATCH  | `/api/v1/profiles/me`      | Signed in | 200     |
 
+The photo has its own endpoints, `PUT` and `DELETE /api/v1/profiles/me/photo`; see
+[photos](photos.md#upload-a-photo).
+
 A user's recipes come from the recipe list: `GET /api/v1/recipes?authorId=<userId>`
 (see [recipes](recipes.md#list-recipes-get-apiv1recipes)).
 
@@ -26,6 +29,7 @@ A user's recipes come from the recipe list: `GET /api/v1/recipes?authorId=<userI
   "id": "01a1622f-0ed0-74d2-9289-641b2988172d",
   "displayName": "Ada L.",
   "bio": "Home cook. Mostly noodles.",
+  "photo": null,
   "createdAt": "2026-10-22T05:56:53.584Z",
   "recipeCount": 1
 }
@@ -35,7 +39,8 @@ A user's recipes come from the recipe list: `GET /api/v1/recipes?authorId=<userI
 - `bio` is `null` when the user hasn't written one.
 - `createdAt` is when the account was created ("member since").
 - `recipeCount` counts the recipes this user authored.
-- No profile photo yet; that needs image uploads, which don't exist yet.
+- `photo` is the user's [photo](photos.md#the-photo-object), or `null` when they haven't
+  added one. Users upload and remove their own with `PUT` and `DELETE /api/v1/profiles/me/photo`.
 
 ## View a profile: `GET /api/v1/profiles/:userId`
 
@@ -83,6 +88,7 @@ type Profile = {
   id: string;
   displayName: string;
   bio: string | null;
+  photo: Photo | null; // Photo: see photos.md
   createdAt: string;
   recipeCount: number;
 };

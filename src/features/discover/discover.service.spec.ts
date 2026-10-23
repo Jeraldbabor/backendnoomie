@@ -15,6 +15,7 @@ const recipeRow = (id: string, saved = false) => ({
   ingredients: [{ name: 'rice', quantity: 200, unit: 'g', note: null }],
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
+  photo: null,
   author: null,
   saves: saved ? [{ id: 'save-1' }] : [],
 });

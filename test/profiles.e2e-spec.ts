@@ -60,6 +60,7 @@ describe('Profiles (e2e)', () => {
       id: ada.id,
       displayName: 'Ada',
       bio: null,
+      photo: null,
       createdAt: expect.any(String),
       recipeCount: 0,
     });
@@ -166,6 +167,7 @@ describe('Profiles (e2e)', () => {
     expect(list.body.data[0].author).toEqual({
       id: ada.id,
       displayName: 'Ada L.',
+      photo: null,
     });
 
     await api().get('/api/v1/recipes').query({ authorId: 'nope' }).expect(400);

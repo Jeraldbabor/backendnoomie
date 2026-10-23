@@ -2,6 +2,31 @@
 
 Newest first. **Breaking** entries say what the app must change.
 
+## 2026-10-23: Photos (not breaking)
+
+- New: `PUT` and `DELETE /api/v1/recipes/:id/photo` (author only), and `PUT` and
+  `DELETE /api/v1/profiles/me/photo` (signed in). Uploads are `multipart/form-data` with
+  one JPEG, PNG or WebP file in the field `photo`, up to 10 MB. HEIC must be converted to
+  JPEG in the app first.
+- The server resizes photos, stores them as WebP, and **removes their metadata, including
+  location**. Profile photos are cropped square.
+- New fields: recipes have `photo`, recipe authors have `author.photo`, and profiles have
+  `photo`. Each is `{ small, large, width, height }` or `null`. `small` and `large` are URL
+  paths on the API: resolve them against the API URL.
+- New: `GET /api/v1/images/:id/:size` serves the files (public, cached forever, not
+  rate-limited).
+- Photos are deleted when replaced or removed, with their recipe, and with their owner's
+  account.
+
+**Setup:** the backend now runs a fourth container, `storage` (image files). Run
+`docker compose up -d --build` as usual after pulling; your `.env` needs no changes for
+Docker. Backend developers who run `npm run start:dev` need the new `STORAGE_*` lines from
+`.env.example` in their `.env`, and `npm run docker:db` now also starts the storage.
+
+**What the app can do:** show recipe and profile photos, and let users add them. Nothing
+existing changed. Details: [photos](api/photos.md), and
+[photos in the app](app-integration/noomie-app.md#photos-in-the-app).
+
 ## 2026-10-23: Discover by ingredients (not breaking)
 
 - New: `GET /api/v1/discover/recipes?ingredients=pasta,tomato,garlic` (anyone; send the

@@ -15,6 +15,9 @@ How to call these from the Noomie app: [app integration](../app-integration/noom
 | PATCH  | `/api/v1/recipes/:id` | Author only | 200     |
 | DELETE | `/api/v1/recipes/:id` | Author only | 204     |
 
+The recipe's photo is uploaded and removed with `PUT` and `DELETE /api/v1/recipes/:id/photo`
+(author only); see [photos](photos.md#upload-a-photo).
+
 The two read endpoints work without a token. **Send the token when the user is signed in**:
 then `savedByMe` is filled in for them. A token that is sent but invalid or expired gets
 **401** `Sign in to continue` (it isn't silently ignored), so treat it like any other 401.
@@ -43,11 +46,13 @@ then `savedByMe` is filled in for them. A token that is sent but invalid or expi
     { "name": "eggs", "quantity": 2, "unit": null, "note": null },
     { "name": "salt", "quantity": null, "unit": null, "note": "to taste" }
   ],
+  "photo": null,
   "createdAt": "2026-10-23T02:49:34.357Z",
   "updatedAt": "2026-10-23T02:49:34.357Z",
   "author": {
     "id": "01a166a9-eaf9-7108-b8ce-1359df2f21c9",
-    "displayName": "Ada"
+    "displayName": "Ada",
+    "photo": null
   },
   "steps": [
     "Cook the spaghetti in salted water until just tender.",
@@ -67,6 +72,9 @@ then `savedByMe` is filled in for them. A token that is sent but invalid or expi
   - `note`: extra text like `finely chopped` or `to taste`, or `null`.
 - **`steps`** are the cooking instructions in order, one text per step. Number them in the
   app; the texts don't include numbers.
+- **`photo`** is the recipe's [photo](photos.md#the-photo-object) (`small` and `large`
+  URLs, with its size), or `null` when it has none. **`author.photo`** is the author's
+  profile photo, or `null`.
 - **`author: null`** means a Noomie editorial recipe (the sample recipes). Show it as
   "Noomie" or similar. Nobody can edit or delete it through the API.
 - The author only includes public fields. Emails are never included.
@@ -245,6 +253,9 @@ type Ingredient = {
   note: string | null;
 };
 
+/** See photos.md. */
+type Photo = { small: string; large: string; width: number; height: number };
+
 /** A recipe in a list (recipe list, saved list). */
 type RecipeSummary = {
   id: string;
@@ -254,9 +265,10 @@ type RecipeSummary = {
   minutes: number;
   servings: number;
   ingredients: Ingredient[];
+  photo: Photo | null;
   createdAt: string;
   updatedAt: string;
-  author: { id: string; displayName: string } | null;
+  author: { id: string; displayName: string; photo: Photo | null } | null;
   savedByMe: boolean;
 };
 

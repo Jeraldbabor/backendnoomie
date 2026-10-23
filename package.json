@@ -28,11 +28,12 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
-    "docker:db": "docker compose up -d postgres",
+    "docker:db": "docker compose up -d postgres storage",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "~3.1148.0",
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.0.1",
     "@nestjs/core": "^12.0.1",
@@ -45,13 +46,15 @@
     "class-validator": "^0.15.1",
     "helmet": "^8.3.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^12.0.0",
     "@nestjs/schematics": "^12.0.0",
     "@nestjs/testing": "^12.0.1",
     "@types/express": "^5.0.0",
+    "@types/multer": "^2.3.0",
     "@types/node": "^24.0.0",
     "@types/supertest": "^7.0.0",
     "@vitest/coverage-v8": "^4.1.2",

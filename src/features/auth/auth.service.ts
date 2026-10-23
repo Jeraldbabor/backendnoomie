@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { EnvironmentVariables } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
+import { ImagesService } from '../images/images.service.js';
 import {
   AuthContext,
   AuthResult,
@@ -31,6 +32,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
+    private readonly images: ImagesService,
     config: ConfigService<EnvironmentVariables, true>,
   ) {
     this.sessionTtlMs =
@@ -146,18 +148,24 @@ export class AuthService {
   }
 
   /**
-   * Permanently deletes the account and everything it created: its sessions, its saves, and
-   * its recipes (with everyone's saves of them). The password is required, so a borrowed or
-   * stolen signed-in phone can't delete the account.
+   * Permanently deletes the account and everything it created: its sessions, its saves, its
+   * recipes (with everyone's saves of them), and its images. The password is required, so a
+   * borrowed or stolen signed-in phone can't delete the account.
    */
   async deleteAccount(userId: string, password: string): Promise<void> {
     await this.assertPassword(userId, password, 'Password is incorrect');
+    const images = await this.prisma.image.findMany({
+      where: { ownerId: userId },
+      select: { id: true },
+    });
     // Recipes first: a recipe's author link is RESTRICT. Everything else cascades from the
-    // user row: sessions, the user's saves, and other users' saves of the deleted recipes.
+    // user row: sessions, the user's saves, other users' saves of the deleted recipes, and
+    // the image rows. The image files go after the database change has committed.
     await this.prisma.$transaction([
       this.prisma.recipe.deleteMany({ where: { authorId: userId } }),
       this.prisma.user.delete({ where: { id: userId } }),
     ]);
+    await this.images.deleteFiles(images.map((image) => image.id));
   }
 
   /**

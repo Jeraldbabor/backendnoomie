@@ -1,4 +1,9 @@
 import type { Prisma } from '../../generated/prisma/client.js';
+import {
+  imageSelect,
+  type ImageView,
+  toImageView,
+} from '../images/images.types.js';
 import type { RecipeIngredientDto } from './dto/recipe-ingredient.dto.js';
 
 /**
@@ -16,9 +21,12 @@ export const recipeSummarySelect = {
     select: { name: true, quantity: true, unit: true, note: true },
     orderBy: { position: 'asc' },
   },
+  photo: { select: imageSelect },
   createdAt: true,
   updatedAt: true,
-  author: { select: { id: true, displayName: true } },
+  author: {
+    select: { id: true, displayName: true, photo: { select: imageSelect } },
+  },
 } satisfies Prisma.RecipeSelect;
 
 /** One recipe in full: the summary plus its steps, which lists leave out to stay small. */
@@ -60,18 +68,43 @@ type RecipeSummaryRow = Prisma.RecipeGetPayload<{
   select: ReturnType<typeof recipeSummarySelectFor>;
 }>;
 
-/** `author` is null for Noomie editorial recipes; `savedByMe` is false when anonymous. */
-export type RecipeView = Omit<RecipeRow, 'saves'> & { savedByMe: boolean };
-/** A recipe in a list: everything but `steps`. */
-export type RecipeSummaryView = Omit<RecipeSummaryRow, 'saves'> & {
+/** The fields every recipe row has that the view changes. */
+type ViewableRow = Pick<RecipeSummaryRow, 'saves' | 'photo' | 'author'>;
+
+/** A recipe row as the API returns it: image URLs instead of image rows, and `savedByMe`. */
+type Viewed<Row extends ViewableRow> = Omit<
+  Row,
+  'saves' | 'photo' | 'author'
+> & {
+  photo: ImageView | null;
+  author: { id: string; displayName: string; photo: ImageView | null } | null;
   savedByMe: boolean;
 };
 
-export function toRecipeView<Row extends { saves: unknown[] }>({
+/**
+ * `author` is null for Noomie editorial recipes; `photo` is null without a photo;
+ * `savedByMe` is false when anonymous.
+ */
+export type RecipeView = Viewed<RecipeRow>;
+/** A recipe in a list: everything but `steps`. */
+export type RecipeSummaryView = Viewed<RecipeSummaryRow>;
+
+export function toRecipeView<Row extends ViewableRow>({
   saves,
+  photo,
+  author,
   ...recipe
-}: Row): Omit<Row, 'saves'> & { savedByMe: boolean } {
-  return { ...recipe, savedByMe: saves.length > 0 };
+}: Row): Viewed<Row> {
+  return {
+    ...recipe,
+    photo: toImageView(photo),
+    author: author && {
+      id: author.id,
+      displayName: author.displayName,
+      photo: toImageView(author.photo),
+    },
+    savedByMe: saves.length > 0,
+  };
 }
 
 /** Rows for `recipe_ingredients`, in the order sent. Empty notes are stored as null. */

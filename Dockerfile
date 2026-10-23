@@ -27,6 +27,9 @@ COPY package.json package-lock.json ./
 # as optional peers (the generated client is already compiled into dist/), and
 # pg-cloudflare, which only Cloudflare Workers need.
 RUN npm ci --omit=dev --omit=optional --ignore-scripts && npm cache clean --force
+# sharp's native image library comes as optional platform packages (@img/*), which the line
+# above drops. The deps stage installed them for this same base image, so copy them over.
+COPY --from=deps /app/node_modules/@img ./node_modules/@img
 
 # ---- production: minimal runtime image -------------------------------------
 FROM base AS production

@@ -7,6 +7,7 @@ import type { ConfigService } from '@nestjs/config';
 import type { EnvironmentVariables } from '../../config/env.validation.js';
 import type { PrismaService } from '../../database/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
+import type { ImagesService } from '../images/images.service.js';
 import { AuthService } from './auth.service.js';
 import type { PasswordService } from './password.service.js';
 import { hashSessionToken } from './session-token.js';
@@ -28,9 +29,11 @@ describe('AuthService', () => {
     },
     session: { create: vi.fn(), findUnique: vi.fn(), deleteMany: vi.fn() },
     recipe: { deleteMany: vi.fn() },
+    image: { findMany: vi.fn() },
     $transaction: vi.fn(),
   };
   const passwords = { hash: vi.fn(), verify: vi.fn() };
+  const images = { deleteFiles: vi.fn() };
   const config = { get: vi.fn(() => 30) };
   let service: AuthService;
 
@@ -44,6 +47,7 @@ describe('AuthService', () => {
     service = new AuthService(
       prisma as unknown as PrismaService,
       passwords as unknown as PasswordService,
+      images as unknown as ImagesService,
       config as unknown as ConfigService<EnvironmentVariables, true>,
     );
   });
@@ -244,6 +248,7 @@ describe('AuthService', () => {
       it("deletes the user's recipes and then the user, together", async () => {
         prisma.user.findUnique.mockResolvedValue({ passwordHash: 'stored' });
         passwords.verify.mockResolvedValue(true);
+        prisma.image.findMany.mockResolvedValue([{ id: 'img-1' }]);
 
         await service.deleteAccount(user.id, 'right');
 
@@ -254,6 +259,26 @@ describe('AuthService', () => {
           where: { id: user.id },
         });
         expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      });
+
+      it("deletes the user's image files after the database change", async () => {
+        prisma.user.findUnique.mockResolvedValue({ passwordHash: 'stored' });
+        passwords.verify.mockResolvedValue(true);
+        prisma.image.findMany.mockResolvedValue([
+          { id: 'img-1' },
+          { id: 'img-2' },
+        ]);
+
+        await service.deleteAccount(user.id, 'right');
+
+        expect(prisma.image.findMany).toHaveBeenCalledWith({
+          where: { ownerId: user.id },
+          select: { id: true },
+        });
+        expect(images.deleteFiles).toHaveBeenCalledWith(['img-1', 'img-2']);
+        expect(images.deleteFiles.mock.invocationCallOrder[0]).toBeGreaterThan(
+          prisma.$transaction.mock.invocationCallOrder[0],
+        );
       });
     });
   });

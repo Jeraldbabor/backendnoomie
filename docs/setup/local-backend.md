@@ -35,7 +35,8 @@ the end of this page.
 
    On Windows Command Prompt use `copy .env.example .env` instead.
 
-3. Start everything (database, migrations, API). The first run takes a few minutes:
+3. Start everything (database, photo storage, migrations, API). The first run takes a few
+   minutes:
 
    ```bash
    docker compose up -d --build

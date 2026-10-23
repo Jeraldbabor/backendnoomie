@@ -9,7 +9,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
+  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -19,6 +21,7 @@ import {
   OptionalSessionAuthGuard,
   SessionAuthGuard,
 } from '../auth/session-auth.guard.js';
+import { PhotoUpload, requirePhoto } from '../images/photo-upload.js';
 import { CreateRecipeDto } from './dto/create-recipe.dto.js';
 import { ListRecipesQueryDto } from './dto/list-recipes-query.dto.js';
 import { UpdateRecipeDto } from './dto/update-recipe.dto.js';
@@ -78,5 +81,29 @@ export class RecipesController {
     @CurrentAuth() auth: AuthContext,
   ) {
     return this.recipesService.remove(id, auth.user.id);
+  }
+
+  // The guard runs before the upload is read, so anonymous uploads are refused early.
+  @Put(':id/photo')
+  @UseGuards(SessionAuthGuard)
+  @ApiBearerAuth()
+  @PhotoUpload()
+  setPhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() photo: Express.Multer.File | undefined,
+    @CurrentAuth() auth: AuthContext,
+  ) {
+    return this.recipesService.setPhoto(id, requirePhoto(photo), auth.user.id);
+  }
+
+  @Delete(':id/photo')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(SessionAuthGuard)
+  @ApiBearerAuth()
+  removePhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentAuth() auth: AuthContext,
+  ) {
+    return this.recipesService.removePhoto(id, auth.user.id);
   }
 }

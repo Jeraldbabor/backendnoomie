@@ -1,16 +1,22 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
+  Put,
+  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { AuthContext } from '../auth/auth.types.js';
 import { CurrentAuth } from '../auth/current-auth.decorator.js';
 import { SessionAuthGuard } from '../auth/session-auth.guard.js';
+import { PhotoUpload, requirePhoto } from '../images/photo-upload.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { ProfilesService } from './profiles.service.js';
 
@@ -33,6 +39,25 @@ export class ProfilesController {
   @ApiBearerAuth()
   updateMine(@Body() dto: UpdateProfileDto, @CurrentAuth() auth: AuthContext) {
     return this.profilesService.updateOwn(auth.user.id, dto);
+  }
+
+  @Put('me/photo')
+  @UseGuards(SessionAuthGuard)
+  @ApiBearerAuth()
+  @PhotoUpload()
+  setMyPhoto(
+    @UploadedFile() photo: Express.Multer.File | undefined,
+    @CurrentAuth() auth: AuthContext,
+  ) {
+    return this.profilesService.setOwnPhoto(auth.user.id, requirePhoto(photo));
+  }
+
+  @Delete('me/photo')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(SessionAuthGuard)
+  @ApiBearerAuth()
+  removeMyPhoto(@CurrentAuth() auth: AuthContext) {
+    return this.profilesService.removeOwnPhoto(auth.user.id);
   }
 
   @Get(':userId')

@@ -1,9 +1,15 @@
 # Local stack for the Noomie API. Values come from `.env` (copy `.env.example`).
-#   Database only (for `npm run start:dev`):  docker compose up -d postgres
-#   Full stack (migrations + API):            docker compose up -d --build
+#   Database and storage (for `npm run start:dev`):  docker compose up -d postgres storage
+#   Full stack (migrations + API):                   docker compose up -d --build
 name: noomie-backend
 
 x-database-url: &database-url postgresql://${POSTGRES_USER:?set in .env}:${POSTGRES_PASSWORD:?set in .env}@postgres:5432/${POSTGRES_DB:?set in .env}
+
+# Local-only storage credentials. The storage port is bound to localhost, so these defaults
+# never leave your machine; set STORAGE_* in .env to change them.
+x-storage-access-key: &storage-access-key ${STORAGE_ACCESS_KEY:-noomie-local}
+x-storage-secret-key: &storage-secret-key ${STORAGE_SECRET_KEY:-noomie-local-secret}
+x-storage-bucket: &storage-bucket ${STORAGE_BUCKET:-noomie-images}
 
 services:
   postgres:
@@ -23,6 +29,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # S3-compatible storage for uploaded images (SeaweedFS in single-process `mini` mode, which
+  # creates the bucket). Production points STORAGE_* at a hosted S3-compatible service instead.
+  storage:
+    image: chrislusf/seaweedfs:4.48
+    restart: unless-stopped
+    command: ['mini', '-dir=/data']
+    environment:
+      AWS_ACCESS_KEY_ID: *storage-access-key
+      AWS_SECRET_ACCESS_KEY: *storage-secret-key
+      S3_BUCKET: *storage-bucket
+    ports:
+      # Bound to localhost only, like the database.
+      - '127.0.0.1:${STORAGE_PORT:-8333}:8333'
+    volumes:
+      - storage-data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'nc -z 127.0.0.1 8333']
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   # One-off job: applies pending Prisma migrations, then exits.
   migrate:
@@ -47,13 +74,20 @@ services:
       DATABASE_URL: *database-url
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
+      STORAGE_ENDPOINT: http://storage:8333
+      STORAGE_BUCKET: *storage-bucket
+      STORAGE_ACCESS_KEY: *storage-access-key
+      STORAGE_SECRET_KEY: *storage-secret-key
     ports:
       - '${API_PORT:-3000}:3000'
     depends_on:
       postgres:
+        condition: service_healthy
+      storage:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
 
 volumes:
   postgres-data:
+  storage-data:

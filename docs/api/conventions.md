@@ -17,6 +17,7 @@ the database is unreachable. It isn't rate-limited.
 ## Requests
 
 - Send and receive **JSON**. Set `Content-Type: application/json` when there is a body.
+  Photo uploads are the exception: they send `multipart/form-data` (see [photos](photos.md)).
 - Signed-in requests send `Authorization: Bearer <token>`. See [authentication](authentication.md).
   Some public endpoints (recipe reads, Discover) also accept a token to personalize the response; if
   you send one there, it must be valid, or you get 401.
@@ -94,11 +95,11 @@ it returns one page of the best matches (`{ data }`, no `nextCursor`).
 ## Rate limits
 
 - Sign-in and registration: **10 requests per minute** per device (IP) and endpoint.
+- Photo uploads: **20 per minute**. Image files (`/api/v1/images/...`) aren't limited.
 - Everything else: **120 requests per minute**.
 - Over the limit you get **429**. Don't retry in a loop; wait and let the user try again.
 
 ## Not available yet
 
-Image uploads (including profile photos), password reset (forgot password), email
-verification, and changing email. To request one, see
+Password reset (forgot password), email verification, and changing email. To request one, see
 [working together](../team/working-together.md#asking-for-a-new-endpoint-or-field).

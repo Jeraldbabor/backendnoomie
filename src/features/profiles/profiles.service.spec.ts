@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../database/prisma.service.js';
+import type { ImagesService } from '../images/images.service.js';
 import { ProfilesService } from './profiles.service.js';
 import { profileSelect } from './profiles.types.js';
 
@@ -7,6 +8,7 @@ const row = {
   id: 'user-1',
   displayName: 'Ada',
   bio: 'Home cook.',
+  photo: { id: 'img-1', width: 512, height: 512 },
   createdAt: new Date('2026-01-01'),
   _count: { recipes: 2 },
 };
@@ -17,12 +19,15 @@ describe('ProfilesService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new ProfilesService(prisma as unknown as PrismaService);
+    service = new ProfilesService(
+      prisma as unknown as PrismaService,
+      {} as ImagesService,
+    );
   });
 
   it('selects public fields only', () => {
     expect(Object.keys(profileSelect).sort()).toEqual(
-      ['_count', 'bio', 'createdAt', 'displayName', 'id'].sort(),
+      ['_count', 'bio', 'createdAt', 'displayName', 'id', 'photo'].sort(),
     );
   });
 
@@ -33,6 +38,12 @@ describe('ProfilesService', () => {
       id: 'user-1',
       displayName: 'Ada',
       bio: 'Home cook.',
+      photo: {
+        small: '/api/v1/images/img-1/small',
+        large: '/api/v1/images/img-1/large',
+        width: 512,
+        height: 512,
+      },
       createdAt: row.createdAt,
       recipeCount: 2,
     });
