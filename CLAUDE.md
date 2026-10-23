@@ -28,7 +28,9 @@ When reporting work as done, list which docs were updated, or say why none were 
 
 `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run test:e2e` (needs the Docker database and storage:
 `npm run docker:db`), and `npm run docs:check`. After schema changes, use
-`npm run db:migrate -- --name <change>`; it regenerates the Prisma client.
+`npm run db:migrate -- --name <change>`; it regenerates the Prisma client. The **CI** GitHub
+workflow runs the same checks (e2e against the full Docker stack) on every push and pull
+request.
 
 ## Conventions
 

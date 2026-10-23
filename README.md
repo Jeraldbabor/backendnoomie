@@ -226,6 +226,22 @@ Then add the models to `schema.prisma`, run a migration, and register the module
 | `npm run db:*`       | Prisma generate / migrate / deploy / seed / reset / studio |
 | `npm run docker:*`   | `db` (database and storage), `up`, `down`                  |
 
+## Continuous integration
+
+Two GitHub workflows run on every push to `develop` and `main` and on every pull request:
+
+- **CI** (`.github/workflows/ci.yml`):
+  - **Lint, types, unit tests, build:** `npm run lint`, `npx tsc --noEmit`, `npm test`,
+    `npm run build`.
+  - **End-to-end tests:** copies `.env.example` to `.env`, starts the whole Docker stack
+    (`docker compose up -d --build`: database, storage, migrations, production API image),
+    waits for `/api/health`, runs `npm run test:e2e`, then loads the sample recipes with
+    the documented Docker command. Container logs are printed when it fails.
+- **Docs** (`.github/workflows/docs.yml`): `docs/` matches the API, links resolve, and API
+  changes come with a changelog entry.
+
+Run the same checks locally before pushing (see [CLAUDE.md](CLAUDE.md#checks-before-finishing)).
+
 ## Environment variables
 
 See `.env.example`. The app validates its variables at startup (`src/config/env.validation.ts`)
