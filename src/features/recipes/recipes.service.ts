@@ -9,7 +9,14 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { CreateRecipeDto } from './dto/create-recipe.dto.js';
 import { ListRecipesQueryDto } from './dto/list-recipes-query.dto.js';
 import { UpdateRecipeDto } from './dto/update-recipe.dto.js';
-import { recipeSelectFor, RecipeView, toRecipeView } from './recipes.types.js';
+import {
+  recipeSelectFor,
+  recipeSummarySelectFor,
+  RecipeSummaryView,
+  RecipeView,
+  toIngredientRows,
+  toRecipeView,
+} from './recipes.types.js';
 
 @Injectable()
 export class RecipesService {
@@ -17,19 +24,33 @@ export class RecipesService {
 
   /** `authorId` comes from the verified session, never from the request body. */
   async create(dto: CreateRecipeDto, authorId: string): Promise<RecipeView> {
-    const { title, description, cuisine, minutes, ingredients } = dto;
+    const { title, description, cuisine, minutes, servings, steps } = dto;
     const recipe = await this.prisma.recipe.create({
-      data: { title, description, cuisine, minutes, ingredients, authorId },
+      data: {
+        title,
+        description,
+        cuisine,
+        minutes,
+        servings,
+        steps,
+        authorId,
+        ingredients: {
+          createMany: { data: toIngredientRows(dto.ingredients) },
+        },
+      },
       select: recipeSelectFor(authorId),
     });
     return toRecipeView(recipe);
   }
 
-  /** `viewerId` is the signed-in user, if any; it only decides `savedByMe`. */
+  /**
+   * Lists leave out `steps`. `viewerId` is the signed-in user, if any; it only decides
+   * `savedByMe`.
+   */
   async findMany(
     query: ListRecipesQueryDto,
     viewerId?: string,
-  ): Promise<CursorPage<RecipeView>> {
+  ): Promise<CursorPage<RecipeSummaryView>> {
     const { cursor, limit, search, cuisine, authorId } = query;
 
     // UUIDv7 ids are time-ordered, so `id < cursor` walks from newest to oldest
@@ -51,7 +72,7 @@ export class RecipesService {
       where,
       orderBy: { id: 'desc' },
       take: limit + 1,
-      select: recipeSelectFor(viewerId),
+      select: recipeSummarySelectFor(viewerId),
     });
 
     const hasMore = rows.length > limit;
@@ -76,10 +97,23 @@ export class RecipesService {
     userId: string,
   ): Promise<RecipeView> {
     await this.assertAuthor(id, userId);
+    const { title, description, cuisine, minutes, servings, steps } = dto;
     // If the recipe is deleted meanwhile, Prisma P2025 maps to 404 (PrismaExceptionFilter).
+    // Sent ingredients replace the whole list, in the same statement as the other fields.
     const recipe = await this.prisma.recipe.update({
       where: { id },
-      data: dto,
+      data: {
+        title,
+        description,
+        cuisine,
+        minutes,
+        servings,
+        steps,
+        ingredients: dto.ingredients && {
+          deleteMany: {},
+          createMany: { data: toIngredientRows(dto.ingredients) },
+        },
+      },
       select: recipeSelectFor(userId),
     });
     return toRecipeView(recipe);

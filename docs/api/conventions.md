@@ -23,8 +23,9 @@ the database is unreachable. It isn't rate-limited.
 - **Only send the fields an endpoint documents.** Unknown fields are rejected with 400
   (`property X should not exist`). This is on purpose: for example, nobody can set a
   recipe's author by sending `authorId`.
-- Names, titles, descriptions, cuisines and search text are trimmed by the server. Emails
-  are trimmed and lowercased. Passwords and recipe ingredients are kept exactly as sent.
+- Names, titles, descriptions, cuisines, search text, recipe steps, and ingredient names and
+  notes are trimmed by the server. Emails are trimmed and lowercased. Passwords are kept
+  exactly as sent.
 
 ## Responses
 

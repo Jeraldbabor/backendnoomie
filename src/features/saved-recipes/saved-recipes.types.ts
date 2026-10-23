@@ -1,7 +1,10 @@
-import type { RecipeView } from '../recipes/recipes.types.js';
+import type { RecipeSummaryView } from '../recipes/recipes.types.js';
 
-/** One entry in the signed-in user's saved list: the live original recipe, never a copy. */
+/**
+ * One entry in the signed-in user's saved list: the live original recipe, never a copy. Like
+ * other lists, it leaves out `steps`.
+ */
 export interface SavedRecipeView {
   savedAt: Date;
-  recipe: RecipeView;
+  recipe: RecipeSummaryView;
 }

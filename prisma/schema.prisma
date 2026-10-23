@@ -15,16 +15,16 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(uuid(7)) @db.Uuid
+  id           String        @id @default(uuid(7)) @db.Uuid
   /// Stored lowercased and trimmed, so uniqueness is case-insensitive.
-  email        String    @unique @db.VarChar(254)
-  displayName  String    @map("display_name") @db.VarChar(50)
+  email        String        @unique @db.VarChar(254)
+  displayName  String        @map("display_name") @db.VarChar(50)
   /// Public profile text; null when the user hasn't written one.
-  bio          String?   @db.VarChar(160)
+  bio          String?       @db.VarChar(160)
   /// scrypt hash with its parameters; never returned by the API.
-  passwordHash String    @map("password_hash")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  passwordHash String        @map("password_hash")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   sessions     Session[]
   recipes      Recipe[]
   savedRecipes SavedRecipe[]
@@ -46,25 +46,48 @@ model Session {
 }
 
 model Recipe {
-  id          String   @id @default(uuid(7)) @db.Uuid
-  title       String   @db.VarChar(120)
-  description String?  @db.VarChar(2000)
-  cuisine     String   @db.VarChar(60)
+  id          String             @id @default(uuid(7)) @db.Uuid
+  title       String             @db.VarChar(120)
+  description String?            @db.VarChar(2000)
+  cuisine     String             @db.VarChar(60)
   minutes     Int
-  ingredients String[]
+  /// How many portions the ingredient quantities make.
+  servings    Int
+  /// Cooking instructions in order, one entry per step.
+  steps       String[]
+  ingredients RecipeIngredient[]
   /// Set from the signed-in user when created, never from the request body, and never
   /// changed afterwards. Null for Noomie editorial recipes (seed data), which no user can edit.
   /// Restrict: AuthService.deleteAccount deletes a user's recipes before the user; nothing
   /// else may delete a user and leave their recipes behind.
-  authorId    String?  @map("author_id") @db.Uuid
-  author      User?    @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  authorId    String?            @map("author_id") @db.Uuid
+  author      User?              @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   saves       SavedRecipe[]
 
   @@index([cuisine])
   @@index([authorId])
   @@map("recipes")
+}
+
+/// One line of a recipe's ingredient list. Editing a recipe's ingredients replaces the whole
+/// list, so rows have no identity beyond their recipe and position.
+model RecipeIngredient {
+  recipeId String  @map("recipe_id") @db.Uuid
+  recipe   Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  /// Order in the recipe, from 0.
+  position Int
+  name     String  @db.VarChar(100)
+  /// Amount in `unit`, or a count when there is no unit ("2" eggs). Null for "to taste".
+  quantity Float?
+  /// One of INGREDIENT_UNITS (recipes/dto/recipe-ingredient.dto.ts), or null.
+  unit     String? @db.VarChar(10)
+  /// Free text such as "chopped" or "to taste".
+  note     String? @db.VarChar(100)
+
+  @@id([recipeId, position])
+  @@map("recipe_ingredients")
 }
 
 /// A user's bookmark. It references the original recipe (never a copy), so the author's

@@ -21,28 +21,39 @@ list (see [recipes](recipes.md#the-recipe-object)).
 
 ```json
 {
-  "savedAt": "2026-10-22T06:39:52.122Z",
+  "savedAt": "2026-10-23T02:50:43.123Z",
   "recipe": {
-    "id": "01a16256-66af-74b2-8439-ee357145228c",
-    "title": "Garlic noodles",
-    "description": "Quick weeknight noodles.",
-    "cuisine": "Italian-inspired",
-    "minutes": 15,
-    "ingredients": ["noodles", "garlic", "butter"],
-    "createdAt": "2026-10-22T06:39:51.983Z",
-    "updatedAt": "2026-10-22T06:39:51.983Z",
-    "author": {
-      "id": "01a16256-634f-748f-8c41-41208260aced",
-      "displayName": "Ada"
-    },
+    "id": "01a15c75-d56e-7289-b05f-88dace8d8095",
+    "title": "Lemon & herb chickpea bowl",
+    "description": "Chickpeas, crisp cucumber and a bright lemon dressing. A little freshness for your everyday table.",
+    "cuisine": "Mediterranean",
+    "minutes": 20,
+    "servings": 2,
+    "ingredients": [
+      {
+        "name": "chickpeas",
+        "quantity": 400,
+        "unit": "g",
+        "note": "drained and rinsed"
+      },
+      { "name": "cucumber", "quantity": 1, "unit": null, "note": "diced" },
+      { "name": "salt", "quantity": null, "unit": null, "note": "to taste" }
+    ],
+    "createdAt": "2026-10-21T03:16:28.654Z",
+    "updatedAt": "2026-10-23T02:50:01.849Z",
+    "author": null,
     "savedByMe": true
   }
 }
 ```
 
+(Ingredients shortened here; the API returns all of them.)
+
 - `savedAt` is when the user saved it.
-- `recipe` is the normal [recipe object](recipes.md#the-recipe-object), always with
-  `savedByMe: true`. Editorial recipes (`author: null`) can be saved too.
+- `recipe` is a recipe as it appears in lists: the [recipe object](recipes.md#the-recipe-object)
+  [without `steps`](recipes.md#in-lists-recipes-have-no-steps), always with
+  `savedByMe: true`. Load the full recipe with `GET /api/v1/recipes/:id` when the user opens
+  it. Editorial recipes (`author: null`) can be saved too.
 
 ## Your saved list: `GET /api/v1/saved-recipes` (signed in)
 
@@ -81,6 +92,6 @@ it disappears from everyone's saved list. There is no "deleted recipe" placehold
 ## Types
 
 ```ts
-type SavedRecipe = { savedAt: string; recipe: Recipe }; // Recipe: see recipes.md
+type SavedRecipe = { savedAt: string; recipe: RecipeSummary }; // see recipes.md
 type SavedRecipePage = { data: SavedRecipe[]; nextCursor: string | null };
 ```

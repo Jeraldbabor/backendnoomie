@@ -42,8 +42,16 @@ describe('Noomie API (e2e)', () => {
       title: '  E2E test soup  ',
       cuisine: `Test kitchen ${runId}`,
       minutes: 15,
-      ingredients: ['water', 'salt'],
+      servings: 2,
+      ingredients: [
+        { name: ' water ', quantity: 1.5, unit: 'l' },
+        { name: 'salt', note: 'to taste' },
+      ],
+      steps: ['  Boil the water.  ', 'Season with salt.'],
     };
+    const auth = (user: { token: string }) => ({
+      Authorization: `Bearer ${user.token}`,
+    });
     const owner = {
       token: '',
       id: '',
@@ -74,7 +82,14 @@ describe('Noomie API (e2e)', () => {
         user.id = res.body.user.id;
       }
       const editorial = await prisma.recipe.create({
-        data: { ...newRecipe, title: 'E2E editorial recipe' },
+        data: {
+          title: 'E2E editorial recipe',
+          cuisine: newRecipe.cuisine,
+          minutes: 15,
+          servings: 2,
+          steps: ['Serve.'],
+          ingredients: { create: [{ position: 0, name: 'water' }] },
+        },
       });
       editorialId = editorial.id;
     });
@@ -104,10 +119,54 @@ describe('Noomie API (e2e)', () => {
       expect(res.body).toMatchObject({
         title: 'E2E test soup',
         minutes: 15,
+        servings: 2,
         author: { id: owner.id, displayName: 'Recipe Owner' },
       });
+      expect(res.body.ingredients).toEqual([
+        { name: 'water', quantity: 1.5, unit: 'l', note: null },
+        { name: 'salt', quantity: null, unit: null, note: 'to taste' },
+      ]);
+      expect(res.body.steps).toEqual(['Boil the water.', 'Season with salt.']);
       expect(res.body.author).not.toHaveProperty('email');
       expect(res.body).not.toHaveProperty('authorId');
+    });
+
+    it('rejects invalid ingredients and steps', async () => {
+      const res = await api()
+        .post('/api/v1/recipes')
+        .set(auth(owner))
+        .send({
+          ...newRecipe,
+          servings: 0,
+          ingredients: [
+            { name: 'flour', unit: 'g' },
+            { name: 'sugar', quantity: 0.0001 },
+            { name: 'eggs', quantity: 1, unit: 'dozen' },
+            { name: '', calories: 5 },
+          ],
+          steps: [],
+        })
+        .expect(400);
+
+      expect(res.body.message).toEqual(
+        expect.arrayContaining([
+          'servings must not be less than 1',
+          'ingredients.0.quantity is required when unit is set',
+          'ingredients.1.quantity must be a number above 0 and up to 100000, with at most 3 decimals',
+          expect.stringMatching(/^ingredients\.2\.unit must be one of/),
+          'ingredients.3.name should not be empty',
+          'ingredients.3.property calories should not exist',
+          'steps must contain at least 1 elements',
+        ]),
+      );
+    });
+
+    it('rejects the old list-of-texts ingredients', async () => {
+      await api()
+        .post('/api/v1/recipes')
+        .set(auth(owner))
+        .send({ ...newRecipe, ingredients: ['water', 'salt'] })
+        .expect(400);
     });
 
     it('rejects a forged author and invalid fields', async () => {
@@ -136,6 +195,9 @@ describe('Noomie API (e2e)', () => {
         id: owner.id,
         displayName: 'Recipe Owner',
       });
+      // Lists carry ingredients but leave the steps to the single-recipe read.
+      expect(created.ingredients).toHaveLength(2);
+      expect(created).not.toHaveProperty('steps');
       const editorial = res.body.data.find(
         (r: { id: string }) => r.id === editorialId,
       );
@@ -180,6 +242,37 @@ describe('Noomie API (e2e)', () => {
 
       expect(res.body.minutes).toBe(25);
       expect(res.body.author.id).toBe(owner.id);
+      expect(res.body.ingredients).toHaveLength(2);
+      expect(res.body.steps).toHaveLength(2);
+    });
+
+    it('replaces the whole ingredient and step lists when they are sent', async () => {
+      const res = await api()
+        .patch(`/api/v1/recipes/${id}`)
+        .set(auth(owner))
+        .send({
+          ingredients: [
+            { name: 'stock', quantity: 1, unit: 'l' },
+            { name: 'noodles', quantity: 200, unit: 'g' },
+            { name: 'pepper', note: '' },
+          ],
+          steps: ['Heat the stock.', 'Cook the noodles in it.'],
+        })
+        .expect(200);
+
+      expect(res.body.ingredients).toEqual([
+        { name: 'stock', quantity: 1, unit: 'l', note: null },
+        { name: 'noodles', quantity: 200, unit: 'g', note: null },
+        { name: 'pepper', quantity: null, unit: null, note: null },
+      ]);
+      expect(res.body.steps).toEqual([
+        'Heat the stock.',
+        'Cook the noodles in it.',
+      ]);
+      const read = await api().get(`/api/v1/recipes/${id}`).expect(200);
+      expect(
+        read.body.ingredients.map((i: { name: string }) => i.name),
+      ).toEqual(['stock', 'noodles', 'pepper']);
     });
 
     it('rejects a malformed id', () => {

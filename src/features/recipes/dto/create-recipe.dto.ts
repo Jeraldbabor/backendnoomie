@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -9,8 +10,10 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { Trim } from '../../../common/transforms/trim.transform.js';
+import { RecipeIngredientDto } from './recipe-ingredient.dto.js';
 
 export class CreateRecipeDto {
   /** @example "Lemon & herb chickpea bowl" */
@@ -39,12 +42,27 @@ export class CreateRecipeDto {
   @Max(1440)
   minutes: number;
 
-  /** @example ["chickpeas", "cucumber", "lemon"] */
+  /** How many portions the ingredient quantities make. @example 2 */
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  servings: number;
+
+  /** In the order they should be listed. */
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => RecipeIngredientDto)
+  ingredients: RecipeIngredientDto[];
+
+  /** Cooking instructions in order, one entry per step. @example ["Rinse the chickpeas."] */
+  @Trim()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
   @IsString({ each: true })
   @IsNotEmpty({ each: true })
-  @MaxLength(100, { each: true })
-  ingredients: string[];
+  @MaxLength(1000, { each: true })
+  steps: string[];
 }

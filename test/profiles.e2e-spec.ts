@@ -148,7 +148,9 @@ describe('Profiles (e2e)', () => {
       title: 'E2E profile soup',
       cuisine: `E2E profiles ${runId}`,
       minutes: 10,
-      ingredients: ['water'],
+      servings: 1,
+      ingredients: [{ name: 'water' }],
+      steps: ['Boil the water.'],
     };
     await api().post('/api/v1/recipes').set(auth(ada)).send(recipe).expect(201);
     await api().post('/api/v1/recipes').set(auth(ben)).send(recipe).expect(201);
