@@ -1,0 +1,82 @@
+# Runs the same checks as "Checks before finishing" in CLAUDE.md on every push and pull
+# request: lint, type check, unit tests and build, then the e2e tests against the real Docker
+# stack (PostgreSQL, storage, migrations, and the production API image).
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Opt out of third-party install telemetry (swagger-ui-dist pulls in @scarf/scarf).
+  SCARF_ANALYTICS: 'false'
+
+jobs:
+  checks:
+    name: Lint, types, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install (also generates Prisma Client)
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Use the example settings
+        # The same file a new developer starts from, so the documented setup is tested too.
+        run: cp .env.example .env
+      - name: Start the Docker stack
+        # Builds the production API image and applies the migrations (the migrate job).
+        run: docker compose up -d --build
+      - name: Install (also generates Prisma Client)
+        run: npm ci
+      - name: Wait for the API to be healthy
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "The API did not become healthy in 2 minutes."
+          exit 1
+      - name: End-to-end tests
+        run: npm run test:e2e
+      - name: Load the sample recipes the documented way
+        run: docker compose run --rm migrate npx prisma db seed
+      - name: Show container logs
+        if: failure()
+        run: docker compose logs --no-color

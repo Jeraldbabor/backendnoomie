@@ -17,6 +17,8 @@ docs correct".
 
 ## Checks
 
+The CI and Docs workflows run these on GitHub too; run them locally first.
+
 - [ ] `npm run lint`
 - [ ] `npm test`
 - [ ] `npm run test:e2e`
