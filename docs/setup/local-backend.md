@@ -54,6 +54,42 @@ the end of this page.
    docker compose run --rm migrate npx prisma db seed
    ```
 
+## Test accounts (optional, local development only)
+
+Create three accounts for sign-in, profiles, saved recipes, and ownership testing:
+
+```bash
+docker compose run --rm --build -e NODE_ENV=development migrate npm run db:seed:users
+```
+
+Or, when running Node.js on your computer with `.env` configured:
+
+```bash
+npm run db:seed:users
+```
+
+| Email                 | Display name  |
+| --------------------- | ------------- |
+| `tester@example.test` | Noomie Tester |
+| `alice@example.test`  | Alice Santos  |
+| `bob@example.test`    | Bob Reyes     |
+
+**Password for all three: `NoomieTest123!`**. These are public test credentials: never run
+this command against a deployed/shared production database. The seeder refuses
+`NODE_ENV=production` (and any mode other than `development` or `test`); an unset mode defaults
+to development. Check your `DATABASE_URL` before running it.
+
+Each password is independently salted using the same scrypt service as registration.
+Re-running adds missing accounts and skips existing emails without changing their passwords,
+profiles, sessions, or other data. If you changed a test account's password, use the changed
+password; the seeder does not reset it. It creates no recipes or sessions: sign in normally
+in the app. `npm run db:seed` still only loads editorial recipes.
+
+Backend contributors: `test/seed-users.e2e-spec.ts` uses fixed emails and is skipped unless
+`SEED_USERS_E2E=1`. Enable it only with `DATABASE_URL` pointing to an empty disposable
+PostgreSQL instance and `STORAGE_*` pointing to disposable storage. Never enable it against
+your everyday database; it deletes the test accounts during cleanup.
+
 ## Connect the app
 
 Nothing to configure. Start the app from the `Noomie` folder (`npm start`, or

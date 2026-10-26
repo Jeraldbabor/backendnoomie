@@ -73,6 +73,10 @@ jobs:
           done
           echo "The API did not become healthy in 2 minutes."
           exit 1
+      - name: Test user seeder (disposable CI database only)
+        env:
+          SEED_USERS_E2E: '1'
+        run: npm run test:e2e -- test/seed-users.e2e-spec.ts
       - name: End-to-end tests
         run: npm run test:e2e
       - name: Load the sample recipes the documented way
