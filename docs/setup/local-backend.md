@@ -35,8 +35,8 @@ the end of this page.
 
    On Windows Command Prompt use `copy .env.example .env` instead.
 
-3. Start everything (database, photo storage, migrations, API). The first run takes a few
-   minutes:
+3. Start everything (database, photo storage, migrations, API). The first run takes several
+   minutes, because it builds the database image and downloads the 85 MB food-scan model:
 
    ```bash
    docker compose up -d --build

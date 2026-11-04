@@ -43,20 +43,39 @@ model User {
 /// An uploaded image. Its files (WebP, one per size) are in storage under images/<id>/, and
 /// ImagesService deletes them together with the row.
 model Image {
-  id        String   @id @default(uuid(7)) @db.Uuid
+  id          String             @id @default(uuid(7)) @db.Uuid
   /// Who uploaded it. Deleting the account deletes these rows (cascade); AuthService
   /// deletes their files.
-  ownerId   String   @map("owner_id") @db.Uuid
-  owner     User     @relation("ImageOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId     String             @map("owner_id") @db.Uuid
+  owner       User               @relation("ImageOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   /// Size of the `large` file, in pixels; `small` has the same shape.
-  width     Int
-  height    Int
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  recipe    Recipe?
-  profileOf User?    @relation("UserPhoto")
+  width       Int
+  height      Int
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  recipe      Recipe?
+  profileOf   User?              @relation("UserPhoto")
+  fingerprint RecipeFingerprint?
 
   @@index([ownerId])
   @@map("images")
+}
+
+/// What the food scan compares photos against: one fingerprint for each recipe photo. A new
+/// recipe photo becomes findable as soon as this row exists; no model training is involved.
+/// Goes with its image (replacing or removing a photo) and its recipe.
+model RecipeFingerprint {
+  id        String                     @id @default(uuid(7)) @db.Uuid
+  recipeId  String                     @map("recipe_id") @db.Uuid
+  recipe    Recipe                     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  imageId   String                     @unique @map("image_id") @db.Uuid
+  image     Image                      @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  /// Unit-length CLIP image embedding (pgvector). Prisma can't read or write this type, so
+  /// ScanService uses raw SQL for it.
+  embedding Unsupported("vector(512)")
+  createdAt DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([recipeId])
+  @@map("recipe_fingerprints")
 }
 
 /// One signed-in device. The client holds a random token; only its SHA-256 hash is stored.
@@ -73,28 +92,29 @@ model Session {
 }
 
 model Recipe {
-  id          String             @id @default(uuid(7)) @db.Uuid
-  title       String             @db.VarChar(120)
-  description String?            @db.VarChar(2000)
-  cuisine     String             @db.VarChar(60)
-  minutes     Int
+  id           String              @id @default(uuid(7)) @db.Uuid
+  title        String              @db.VarChar(120)
+  description  String?             @db.VarChar(2000)
+  cuisine      String              @db.VarChar(60)
+  minutes      Int
   /// How many portions the ingredient quantities make.
-  servings    Int
+  servings     Int
   /// Cooking instructions in order, one entry per step.
-  steps       String[]
-  ingredients RecipeIngredient[]
+  steps        String[]
+  ingredients  RecipeIngredient[]
   /// Set from the signed-in user when created, never from the request body, and never
   /// changed afterwards. Null for Noomie editorial recipes (seed data), which no user can edit.
   /// Restrict: AuthService.deleteAccount deletes a user's recipes before the user; nothing
   /// else may delete a user and leave their recipes behind.
-  authorId    String?            @map("author_id") @db.Uuid
-  author      User?              @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  authorId     String?             @map("author_id") @db.Uuid
+  author       User?               @relation(fields: [authorId], references: [id], onDelete: Restrict)
   /// Null when the recipe has no photo.
-  photoId     String?            @unique @map("photo_id") @db.Uuid
-  photo       Image?             @relation(fields: [photoId], references: [id], onDelete: SetNull)
-  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
-  saves       SavedRecipe[]
+  photoId      String?             @unique @map("photo_id") @db.Uuid
+  photo        Image?              @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  saves        SavedRecipe[]
+  fingerprints RecipeFingerprint[]
 
   @@index([cuisine])
   @@index([authorId])

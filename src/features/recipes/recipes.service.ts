@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '../../database/prisma.service.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { ImagesService } from '../images/images.service.js';
+import { ScanService } from '../scan/scan.service.js';
 import { CreateRecipeDto } from './dto/create-recipe.dto.js';
 import { ListRecipesQueryDto } from './dto/list-recipes-query.dto.js';
 import { UpdateRecipeDto } from './dto/update-recipe.dto.js';
@@ -27,6 +28,7 @@ export class RecipesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly images: ImagesService,
+    private readonly scan: ScanService,
   ) {}
 
   /** `authorId` comes from the verified session, never from the request body. */
@@ -157,7 +159,10 @@ export class RecipesService {
     await this.images.delete([photoId]);
   }
 
-  /** Sets or replaces the recipe's photo; the previous one is deleted. */
+  /**
+   * Sets or replaces the recipe's photo; the previous one is deleted. The new photo also
+   * becomes findable by the food scan, so a brand-new dish is scannable right away.
+   */
   async setPhoto(
     id: string,
     data: Buffer,
@@ -173,6 +178,7 @@ export class RecipesService {
       throw error;
     }
     await this.images.delete([previous]);
+    await this.scan.indexRecipePhoto(id, image.id, data);
     return this.findOne(id, userId);
   }
 

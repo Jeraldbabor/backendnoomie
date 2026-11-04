@@ -39,14 +39,10 @@ export interface ProcessedImage {
 }
 
 /**
- * Turns an upload into the stored files: decoded, turned upright from its camera orientation,
- * resized for `kind`, and re-encoded as WebP. Re-encoding drops all metadata, including the
- * location many phones record in photos.
+ * Checks the file's real format and size from its header, before anything is decoded. Throws
+ * 400 for anything but a JPEG, PNG or WebP within the pixel limit.
  */
-export async function processImage(
-  kind: ImageKind,
-  input: Buffer,
-): Promise<ProcessedImage> {
+export async function assertUsableImage(input: Buffer): Promise<void> {
   let format: string | undefined;
   let pixels: number;
   try {
@@ -63,6 +59,18 @@ export async function processImage(
   if (pixels > MAX_PIXELS) {
     throw new BadRequestException(IMAGE_TOO_LARGE);
   }
+}
+
+/**
+ * Turns an upload into the stored files: decoded, turned upright from its camera orientation,
+ * resized for `kind`, and re-encoded as WebP. Re-encoding drops all metadata, including the
+ * location many phones record in photos.
+ */
+export async function processImage(
+  kind: ImageKind,
+  input: Buffer,
+): Promise<ProcessedImage> {
+  await assertUsableImage(input);
 
   const render = (size: ImageSize) =>
     sharp(input, { limitInputPixels: MAX_PIXELS })

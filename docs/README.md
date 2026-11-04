@@ -18,6 +18,7 @@ read the backend code. Examples are based on real API responses.
 | Find recipes from the ingredients a user has         | [Discover](api/discover.md)                                |
 | Add, show, or remove recipe and profile photos       | [Photos](api/photos.md)                                    |
 | Follow people, list followers, show the feed         | [Follows and feed](api/follows.md)                         |
+| Find recipes from a photo of food                    | [Food scan](api/scan.md)                                   |
 | Call the API from the Noomie app's code              | [Noomie app integration](app-integration/noomie-app.md)    |
 | Ask for a new endpoint, or report a bug              | [Working together](team/working-together.md)               |
 | See what changed in the API                          | [Changelog](CHANGELOG.md)                                  |
@@ -42,6 +43,7 @@ docs/
 │   ├── discover.md
 │   ├── photos.md
 │   ├── follows.md
+│   ├── scan.md
 │   └── _template.md          template for documenting a new feature
 ├── app-integration/          how the Noomie app's code should call the API
 │   └── noomie-app.md
@@ -87,6 +89,7 @@ docs/
 | GET    | `/api/v1/profiles/:userId/followers` | Anyone      | [Follows and feed](api/follows.md)             |
 | GET    | `/api/v1/profiles/:userId/following` | Anyone      | [Follows and feed](api/follows.md)             |
 | GET    | `/api/v1/feed`                       | Signed in   | [Follows and feed](api/follows.md)             |
+| POST   | `/api/v1/scan`                       | Signed in   | [Food scan](api/scan.md)                       |
 | DELETE | `/api/v1/saved-recipes/:recipeId`    | Signed in   | [Saved recipes](api/saved-recipes.md)          |
 
 Locally the API runs at `http://localhost:3000`.

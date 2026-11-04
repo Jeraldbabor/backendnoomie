@@ -14,6 +14,7 @@ import { ImagesModule } from './features/images/images.module.js';
 import { ProfilesModule } from './features/profiles/profiles.module.js';
 import { RecipesModule } from './features/recipes/recipes.module.js';
 import { SavedRecipesModule } from './features/saved-recipes/saved-recipes.module.js';
+import { ScanModule } from './features/scan/scan.module.js';
 import { StorageModule } from './storage/storage.module.js';
 
 @Module({
@@ -37,6 +38,7 @@ import { StorageModule } from './storage/storage.module.js';
     ProfilesModule,
     RecipesModule,
     SavedRecipesModule,
+    ScanModule,
   ],
   providers: [
     {

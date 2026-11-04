@@ -208,6 +208,24 @@ export const discoverApi = {
 - **Avoid a request per keystroke:** search when a chip is added or removed, not while typing.
 - `{ data: [] }` is a normal empty state ("No recipes use these yet"), not an error.
 
+## Food scan in the app
+
+The [food scan](../api/scan.md) connects to the existing Scan screen (`src/features/scan/`),
+whose Continue button is disabled until an analysis endpoint exists.
+
+- **Upload:** `POST /scan` with the photo in the multipart field `photo`, signed in. `apiRequest()`
+  only sends JSON, so this needs the upload helper described in [photos in the app](#photos-in-the-app).
+- **Convert first.** The Scan screen accepts formats and sizes the API doesn't, such as HEIC and
+  photos over 10 MB. Resize to about 1600 pixels on the long side and save as JPEG before
+  uploading. The model only sees a small version, so this doesn't reduce match quality.
+- **Ask first.** The photo leaves the phone, so explain that before the first scan. The API
+  doesn't keep it.
+- **Show suggestions, not answers:** "Looks like" for `strong`, "Could be" for `possible`, and
+  always a "None of these" action.
+- **Empty `matches`** is a normal result. Offer search, or "Add this as your own recipe".
+- **Allow more time.** A scan usually takes under a second, plus the upload. Pass a longer
+  `timeoutMs` than the default 15 seconds, and let the user cancel.
+
 ## Follows and the feed in the app
 
 The [follows and feed API](../api/follows.md), in `src/features/follows/api.ts`:

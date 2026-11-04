@@ -13,7 +13,9 @@ x-storage-bucket: &storage-bucket ${STORAGE_BUCKET:-noomie-images}
 
 services:
   postgres:
-    image: postgres:18-alpine
+    # postgres:18-alpine plus the pgvector extension; see docker/postgres/Dockerfile.
+    build: ./docker/postgres
+    image: noomie-postgres:18
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?set in .env}

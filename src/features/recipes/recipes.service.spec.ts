@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../database/prisma.service.js';
 import type { ImagesService } from '../images/images.service.js';
 import { imageSelect } from '../images/images.types.js';
+import type { ScanService } from '../scan/scan.service.js';
 import { ListRecipesQueryDto } from './dto/list-recipes-query.dto.js';
 import { RecipesService } from './recipes.service.js';
 import type { CreateRecipeDto } from './dto/create-recipe.dto.js';
@@ -60,6 +61,7 @@ describe('RecipesService', () => {
     $transaction: vi.fn(),
   };
   const images = { create: vi.fn(), delete: vi.fn() };
+  const scan = { indexRecipePhoto: vi.fn() };
   let service: RecipesService;
 
   beforeEach(() => {
@@ -67,6 +69,7 @@ describe('RecipesService', () => {
     service = new RecipesService(
       prisma as unknown as PrismaService,
       images as unknown as ImagesService,
+      scan as unknown as ScanService,
     );
   });
 
@@ -360,6 +363,7 @@ describe('RecipesService', () => {
         data: { photoId: 'img-new' },
       });
       expect(images.delete).toHaveBeenCalledWith(['img-old']);
+      expect(scan.indexRecipePhoto).toHaveBeenCalledWith('r1', 'img-new', data);
     });
 
     it('delete the new image when attaching it fails', async () => {

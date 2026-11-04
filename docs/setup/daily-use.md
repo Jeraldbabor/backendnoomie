@@ -25,6 +25,7 @@ docker compose up -d --build
 The `--build` flag rebuilds the API with the new code. New database migrations are applied
 automatically every time the stack starts. Then read the [changelog](../CHANGELOG.md) for API
 changes the app may need to handle; it also says when to refresh the sample recipes.
+Your data is kept across rebuilds.
 
 Loading the sample recipes is safe to repeat: it adds the missing ones and updates existing
 ones to the latest content. Recipes created by users are never touched.

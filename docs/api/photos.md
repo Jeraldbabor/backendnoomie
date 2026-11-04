@@ -79,6 +79,9 @@ What the server does with the photo:
 - resizes it to the sizes above and stores it as WebP;
 - **removes all metadata, including the location** that phones record in photos.
 
+A recipe photo also makes that recipe findable by the [food scan](scan.md#how-it-finds-new-dishes).
+Profile photos aren't part of the scan.
+
 Returns **200** with the updated recipe (the full recipe, with `steps`) or profile, including
 the new `photo`. Uploading again **replaces** the photo; the old one is deleted, and its URLs
 return 404 from then on.
