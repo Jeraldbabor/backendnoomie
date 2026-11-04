@@ -20,6 +20,14 @@ image now includes pgvector and the API image includes the model. Backend develo
 **What the app can do:** turn on the Scan screen's Continue button. Nothing existing changed.
 Details: [food scan](api/scan.md) and [food scan in the app](app-integration/noomie-app.md#food-scan-in-the-app).
 
+## 2026-10-26: Local test user seeder (not breaking; tooling only)
+
+- New optional `npm run db:seed:users` creates three local accounts with independently
+  salted scrypt password hashes. Existing accounts, passwords, and sessions are untouched.
+- Refuses production mode. `npm run db:seed` still only loads editorial recipes.
+- Credentials and Docker instructions: [test accounts](setup/local-backend.md#test-accounts-optional-local-development-only).
+- No endpoints, response types, or app integration changes.
+
 ## 2026-10-23: Follows and feed (not breaking; one read change to note)
 
 - New: `PUT` and `DELETE /api/v1/profiles/:userId/follow` (signed in). Both are safe to

@@ -76,12 +76,15 @@ npm run docker:db           # start PostgreSQL (localhost:5433) and storage (loc
 npm run scan:model          # download the food-scan model (about 85 MB, once)
 npm run db:deploy           # apply migrations
 npm run db:seed             # optional sample recipes (safe to re-run; refreshes them)
+npm run db:seed:users        # optional local test accounts (safe to re-run; skips existing)
 npm run start:dev           # API with hot reload on http://localhost:3000
 ```
 
 - API base: `http://localhost:3000/api/v1`
 - Health: `http://localhost:3000/api/health`
 - Swagger UI: `http://localhost:3000/docs` (not served when `NODE_ENV=production`)
+
+Test account credentials and Docker commands: [local test accounts](docs/setup/local-backend.md#test-accounts-optional-local-development-only).
 
 The database container publishes host port **5433**, not 5432, so it doesn't clash with
 a PostgreSQL installed directly on Windows. Change `POSTGRES_PORT` and `DATABASE_URL`
@@ -236,19 +239,20 @@ Then add the models to `schema.prisma`, run a migration, and register the module
 
 ## Scripts
 
-| Script               | What it does                                               |
-| -------------------- | ---------------------------------------------------------- |
-| `npm run start:dev`  | Watch mode                                                 |
-| `npm run build`      | Compile to `dist/`                                         |
-| `npm run start:prod` | Run the compiled build                                     |
-| `npm test`           | Unit tests (`src/**/*.spec.ts`)                            |
-| `npm run test:e2e`   | e2e tests against the database in `DATABASE_URL`           |
-| `npm run docs:check` | Checks `docs/` covers every route and all links resolve    |
-| `npm run scan:model` | Download and verify the food-scan model                    |
-| `npm run lint`       | oxlint (type-aware)                                        |
-| `npm run format`     | Prettier                                                   |
-| `npm run db:*`       | Prisma generate / migrate / deploy / seed / reset / studio |
-| `npm run docker:*`   | `db` (database and storage), `up`, `down`                  |
+| Script                  | What it does                                               |
+| ----------------------- | ---------------------------------------------------------- |
+| `npm run start:dev`     | Watch mode                                                 |
+| `npm run build`         | Compile to `dist/`                                         |
+| `npm run start:prod`    | Run the compiled build                                     |
+| `npm test`              | Unit tests (`src/**/*.spec.ts`)                            |
+| `npm run test:e2e`      | e2e tests against the database in `DATABASE_URL`           |
+| `npm run docs:check`    | Checks `docs/` covers every route and all links resolve    |
+| `npm run scan:model`    | Download and verify the food-scan model                    |
+| `npm run lint`          | oxlint (type-aware)                                        |
+| `npm run format`        | Prettier                                                   |
+| `npm run db:seed:users` | Add missing local test accounts (never resets passwords)   |
+| `npm run db:*`          | Prisma generate / migrate / deploy / seed / reset / studio |
+| `npm run docker:*`      | `db` (database and storage), `up`, `down`                  |
 
 ## Continuous integration
 

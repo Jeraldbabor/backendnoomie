@@ -4,14 +4,15 @@ Run these in the `backendnoomie` folder. First-time setup is in [run the backend
 
 ## Everyday commands
 
-| What                                    | Command                                               |
-| --------------------------------------- | ----------------------------------------------------- |
-| Start the backend                       | `docker compose up -d`                                |
-| Stop it (your data is kept)             | `docker compose down`                                 |
-| Check it's running                      | open http://localhost:3000/api/health                 |
-| See the API logs                        | `docker compose logs -f api`                          |
-| Load or refresh the sample recipes      | `docker compose run --rm migrate npx prisma db seed`  |
-| Wipe your local database and start over | `docker compose down -v`, then `docker compose up -d` |
+| What                                    | Command                                                                                 |
+| --------------------------------------- | --------------------------------------------------------------------------------------- |
+| Start the backend                       | `docker compose up -d`                                                                  |
+| Stop it (your data is kept)             | `docker compose down`                                                                   |
+| Check it's running                      | open http://localhost:3000/api/health                                                   |
+| See the API logs                        | `docker compose logs -f api`                                                            |
+| Load or refresh the sample recipes      | `docker compose run --rm migrate npx prisma db seed`                                    |
+| Add missing local test accounts         | `docker compose run --rm --build -e NODE_ENV=development migrate npm run db:seed:users` |
+| Wipe your local database and start over | `docker compose down -v`, then `docker compose up -d`                                   |
 
 `docker compose down -v` deletes all accounts, recipes and photos **on your computer only**.
 
