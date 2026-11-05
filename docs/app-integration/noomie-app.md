@@ -208,6 +208,61 @@ export const discoverApi = {
 - **Avoid a request per keystroke:** search when a chip is added or removed, not while typing.
 - `{ data: [] }` is a normal empty state ("No recipes use these yet"), not an error.
 
+## Food scan in the app
+
+The [food scan](../api/scan.md) connects to the existing Scan screen (`src/features/scan/`),
+whose Continue button is disabled until an analysis endpoint exists.
+
+- **Upload:** `POST /scan` with the photo in the multipart field `photo`, signed in. `apiRequest()`
+  only sends JSON, so this needs the upload helper described in [photos in the app](#photos-in-the-app).
+- **Convert first.** The Scan screen accepts formats and sizes the API doesn't, such as HEIC and
+  photos over 10 MB. Resize to about 1600 pixels on the long side and save as JPEG before
+  uploading. The model only sees a small version, so this doesn't reduce match quality.
+- **Ask first.** The photo leaves the phone, so explain that before the first scan. The API
+  doesn't keep it.
+- **Show suggestions, not answers:** "Looks like" for `strong`, "Could be" for `possible`, and
+  always a "None of these" action.
+- **Empty `matches`** is a normal result. Offer search, or "Add this as your own recipe".
+- **Allow more time.** A scan usually takes under a second, plus the upload. Pass a longer
+  `timeoutMs` than the default 15 seconds, and let the user cancel.
+
+## Follows and the feed in the app
+
+The [follows and feed API](../api/follows.md), in `src/features/follows/api.ts`:
+
+```ts
+type Paging = { limit?: number; cursor?: string };
+
+export const followsApi = {
+  follow: (userId: string, token: string) =>
+    apiRequest<void>(`/profiles/${userId}/follow`, { method: 'PUT', token }),
+  unfollow: (userId: string, token: string) =>
+    apiRequest<void>(`/profiles/${userId}/follow`, { method: 'DELETE', token }),
+  followers: (userId: string, params: Paging, token?: string | null) =>
+    apiRequest<FollowPage>(`/profiles/${userId}/followers?${query(params)}`, {
+      token,
+    }),
+  following: (userId: string, params: Paging, token?: string | null) =>
+    apiRequest<FollowPage>(`/profiles/${userId}/following?${query(params)}`, {
+      token,
+    }),
+  feed: (params: Paging, token: string) =>
+    apiRequest<RecipePage>(`/feed?${query(params)}`, { token }),
+};
+```
+
+`apiRequest()`'s `method` type lists `GET`, `POST`, `PATCH` and `DELETE`; add `PUT` for
+`follow` (saving recipes needs it too).
+
+- **Follow button:** show it from `profile.followedByMe` (send the token on profile reads),
+  and hide it on your own profile. Update the button and `followerCount` right away, and
+  roll back if the request fails. Both calls are safe to repeat.
+- **Lists:** each row has `followedByMe`, so rows can have their own Follow buttons.
+- **Feed tab:** an empty feed is normal for new users; suggest recipes or people to follow.
+  Refresh it after following or unfollowing someone.
+- **A 401 on a profile read** now means the stored token is no longer valid. Sign out as
+  with any other 401.
+
 ## Photos in the app
 
 The [photos API](../api/photos.md) needs two small additions to `src/api/`, because

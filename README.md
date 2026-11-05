@@ -9,6 +9,8 @@ REST API for the Noomie app.
 - Validation with `class-validator`, Swagger docs, Helmet, rate limiting, URI versioning
 - Photo uploads: `sharp` (resize, WebP, metadata stripped) into S3-compatible storage
   (SeaweedFS in Docker locally)
+- Food scan: photo matching with a CLIP image model on `onnxruntime-node` (CPU, no per-scan
+  cost) and pgvector
 - Vitest unit and e2e tests, oxlint, Prettier
 
 **Frontend developers:** start with the [API guide in `docs/`](docs/README.md). It covers
@@ -42,6 +44,9 @@ backendnoomie/
 │   │   ├── saved-recipes/     # each user's private bookmarks of recipes
 │   │   ├── discover/          # recipes ranked by the ingredients a user has
 │   │   ├── images/            # photo processing, storage, and serving image files
+│   │   ├── follows/           # follow/unfollow, followers and following lists
+│   │   ├── feed/              # recipes by the people you follow
+│   │   ├── scan/              # food scan: photo fingerprints and matching
 │   │   └── recipes/
 │   │       ├── dto/
 │   │       ├── recipes.controller.ts
@@ -50,6 +55,8 @@ backendnoomie/
 │   │       └── recipes.module.ts
 │   └── generated/prisma/      # generated Prisma Client (git-ignored)
 ├── test/                      # e2e tests
+├── docker/postgres/           # PostgreSQL image: Alpine plus pgvector
+├── models/                    # food-scan model (git-ignored; `npm run scan:model`)
 ├── Dockerfile                 # multi-stage: deps → build → production
 └── docker-compose.yml         # postgres + storage + migrate job + api
 ```
@@ -66,6 +73,7 @@ Prerequisites: Node.js 22.12+, npm, Docker Desktop.
 npm install                 # also generates Prisma Client
 cp .env.example .env        # then set POSTGRES_PASSWORD and the matching DATABASE_URL
 npm run docker:db           # start PostgreSQL (localhost:5433) and storage (localhost:8333)
+npm run scan:model          # download the food-scan model (about 85 MB, once)
 npm run db:deploy           # apply migrations
 npm run db:seed             # optional sample recipes (safe to re-run; refreshes them)
 npm run db:seed:users        # optional local test accounts (safe to re-run; skips existing)
@@ -98,33 +106,39 @@ dependencies only.
 
 ## Endpoints
 
-| Method | Path                              | Access      | Description                                                  |
-| ------ | --------------------------------- | ----------- | ------------------------------------------------------------ |
-| GET    | `/api/health`                     | Public      | Liveness and database connectivity                           |
-| POST   | `/api/v1/auth/register`           | Public      | Create an account and sign in                                |
-| POST   | `/api/v1/auth/login`              | Public      | Sign in with email and password                              |
-| GET    | `/api/v1/auth/me`                 | Signed in   | Current user                                                 |
-| POST   | `/api/v1/auth/logout`             | Signed in   | Revoke the current session                                   |
-| POST   | `/api/v1/auth/logout-all`         | Signed in   | Revoke every session of the user, including this one         |
-| POST   | `/api/v1/auth/change-password`    | Signed in   | Change password; signs out the user's other devices          |
-| POST   | `/api/v1/auth/delete-account`     | Signed in   | Delete the account and the recipes it wrote (needs password) |
-| GET    | `/api/v1/recipes`                 | Public      | List recipes (`?search=&cuisine=&authorId=&limit=&cursor=`)  |
-| GET    | `/api/v1/recipes/:id`             | Public      | Get one recipe                                               |
-| POST   | `/api/v1/recipes`                 | Signed in   | Create a recipe; you become its author                       |
-| PATCH  | `/api/v1/recipes/:id`             | Author only | Update your recipe                                           |
-| DELETE | `/api/v1/recipes/:id`             | Author only | Delete your recipe                                           |
-| GET    | `/api/v1/profiles/:userId`        | Public      | A user's public profile                                      |
-| GET    | `/api/v1/profiles/me`             | Signed in   | Your own profile                                             |
-| PATCH  | `/api/v1/profiles/me`             | Signed in   | Edit your display name and bio                               |
-| GET    | `/api/v1/saved-recipes`           | Signed in   | Your saved recipes, most recently saved first                |
-| PUT    | `/api/v1/saved-recipes/:recipeId` | Signed in   | Save a recipe (safe to repeat)                               |
-| DELETE | `/api/v1/saved-recipes/:recipeId` | Signed in   | Unsave a recipe (safe to repeat)                             |
-| GET    | `/api/v1/discover/recipes`        | Public      | Recipes ranked by the `?ingredients=` a user has             |
-| PUT    | `/api/v1/recipes/:id/photo`       | Author only | Upload or replace the recipe photo (multipart `photo`)       |
-| DELETE | `/api/v1/recipes/:id/photo`       | Author only | Remove the recipe photo                                      |
-| PUT    | `/api/v1/profiles/me/photo`       | Signed in   | Upload or replace your profile photo (multipart `photo`)     |
-| DELETE | `/api/v1/profiles/me/photo`       | Signed in   | Remove your profile photo                                    |
-| GET    | `/api/v1/images/:id/:size`        | Public      | An image file (`small` or `large`, WebP, cached forever)     |
+| Method | Path                                 | Access      | Description                                                  |
+| ------ | ------------------------------------ | ----------- | ------------------------------------------------------------ |
+| GET    | `/api/health`                        | Public      | Liveness and database connectivity                           |
+| POST   | `/api/v1/auth/register`              | Public      | Create an account and sign in                                |
+| POST   | `/api/v1/auth/login`                 | Public      | Sign in with email and password                              |
+| GET    | `/api/v1/auth/me`                    | Signed in   | Current user                                                 |
+| POST   | `/api/v1/auth/logout`                | Signed in   | Revoke the current session                                   |
+| POST   | `/api/v1/auth/logout-all`            | Signed in   | Revoke every session of the user, including this one         |
+| POST   | `/api/v1/auth/change-password`       | Signed in   | Change password; signs out the user's other devices          |
+| POST   | `/api/v1/auth/delete-account`        | Signed in   | Delete the account and the recipes it wrote (needs password) |
+| GET    | `/api/v1/recipes`                    | Public      | List recipes (`?search=&cuisine=&authorId=&limit=&cursor=`)  |
+| GET    | `/api/v1/recipes/:id`                | Public      | Get one recipe                                               |
+| POST   | `/api/v1/recipes`                    | Signed in   | Create a recipe; you become its author                       |
+| PATCH  | `/api/v1/recipes/:id`                | Author only | Update your recipe                                           |
+| DELETE | `/api/v1/recipes/:id`                | Author only | Delete your recipe                                           |
+| GET    | `/api/v1/profiles/:userId`           | Public      | A user's public profile                                      |
+| GET    | `/api/v1/profiles/me`                | Signed in   | Your own profile                                             |
+| PATCH  | `/api/v1/profiles/me`                | Signed in   | Edit your display name and bio                               |
+| GET    | `/api/v1/saved-recipes`              | Signed in   | Your saved recipes, most recently saved first                |
+| PUT    | `/api/v1/saved-recipes/:recipeId`    | Signed in   | Save a recipe (safe to repeat)                               |
+| DELETE | `/api/v1/saved-recipes/:recipeId`    | Signed in   | Unsave a recipe (safe to repeat)                             |
+| GET    | `/api/v1/discover/recipes`           | Public      | Recipes ranked by the `?ingredients=` a user has             |
+| PUT    | `/api/v1/recipes/:id/photo`          | Author only | Upload or replace the recipe photo (multipart `photo`)       |
+| DELETE | `/api/v1/recipes/:id/photo`          | Author only | Remove the recipe photo                                      |
+| PUT    | `/api/v1/profiles/me/photo`          | Signed in   | Upload or replace your profile photo (multipart `photo`)     |
+| DELETE | `/api/v1/profiles/me/photo`          | Signed in   | Remove your profile photo                                    |
+| GET    | `/api/v1/images/:id/:size`           | Public      | An image file (`small` or `large`, WebP, cached forever)     |
+| PUT    | `/api/v1/profiles/:userId/follow`    | Signed in   | Follow a user (safe to repeat; not yourself)                 |
+| DELETE | `/api/v1/profiles/:userId/follow`    | Signed in   | Unfollow a user (safe to repeat)                             |
+| GET    | `/api/v1/profiles/:userId/followers` | Public      | Who follows the user, newest first                           |
+| GET    | `/api/v1/profiles/:userId/following` | Public      | Who the user follows, newest first                           |
+| GET    | `/api/v1/feed`                       | Signed in   | Recipes by the people you follow, newest first               |
+| POST   | `/api/v1/scan`                       | Signed in   | Recipes with similar photos (multipart `photo`)              |
 
 "Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
 session. "Author only" routes also answer **403** when the recipe belongs to someone else.
@@ -143,6 +157,15 @@ Replacing or removing a photo, deleting a recipe, and deleting an account delete
 too. `GET /api/v1/images/:id/:size` streams the files through the API, so the app reaches
 them through the same address as the API (including the Expo tunnel). Responses carry
 `photo: { small, large, width, height } | null` with URL paths built in `images.types.ts`.
+
+The food scan (`features/scan`) compares photos instead of recognizing a fixed list of dishes,
+so dishes users invent need no retraining. `PhotoFingerprintService` runs a CLIP image model
+on the CPU, turning a photo into 512 numbers; `recipe_fingerprints` keeps one row per recipe
+photo (pgvector, written with raw SQL because Prisma can't handle that type). A photo is
+fingerprinted right after upload, and rows go with their image or recipe. A scan is a nearest
+match over every row; add an index if that ever gets slow. The cut-offs in `scan.service.ts`
+come from a test on real photos, summarized in [docs/api/scan.md](docs/api/scan.md). The API
+boots without the model file; only scanning is affected (503).
 
 Discover matches ingredients on `recipe_ingredients.match_key`, which the **database** fills:
 the SQL function `ingredient_match_key(name)` (case, accents, punctuation, plural endings)
@@ -224,6 +247,7 @@ Then add the models to `schema.prisma`, run a migration, and register the module
 | `npm test`              | Unit tests (`src/**/*.spec.ts`)                            |
 | `npm run test:e2e`      | e2e tests against the database in `DATABASE_URL`           |
 | `npm run docs:check`    | Checks `docs/` covers every route and all links resolve    |
+| `npm run scan:model`    | Download and verify the food-scan model                    |
 | `npm run lint`          | oxlint (type-aware)                                        |
 | `npm run format`        | Prettier                                                   |
 | `npm run db:seed:users` | Add missing local test accounts (never resets passwords)   |
@@ -277,5 +301,11 @@ and refuses to boot if they are invalid.
 - Local storage is SeaweedFS (`weed mini`, pinned image), not MinIO: MinIO stopped publishing
   its free Docker images in 2025 and is no longer maintained. The API only speaks the S3 API,
   so production can use AWS S3, Cloudflare R2 or similar by changing `STORAGE_*`.
+- The API image is Debian, because `onnxruntime-node` only ships glibc builds. The database
+  image stays on Alpine: moving a database created there to Debian changes how text sorts and
+  would silently break its text indexes. So `docker/postgres` builds pgvector onto Alpine
+  rather than using the Debian `pgvector/pgvector` image.
+- `scripts/fetch-scan-model.mjs` pins the model by revision and checksum. Changing the model
+  means re-creating every fingerprint.
 - sharp's native library ships as optional `@img/*` packages. The Dockerfile's production
   stage omits optional dependencies, so it copies `@img` from the `deps` stage.

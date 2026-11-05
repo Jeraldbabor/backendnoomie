@@ -1,9 +1,12 @@
 # syntax=docker/dockerfile:1
 
 # ---- base: shared runtime ---------------------------------------------------
-FROM node:22-alpine AS base
+# Debian, not Alpine: onnxruntime-node (the food scan) only ships glibc builds.
+FROM node:22-trixie-slim AS base
 # OpenSSL lets Prisma detect the platform and run its schema engine (migrations).
-RUN apk add --no-cache openssl
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # Opt out of third-party install telemetry (swagger-ui-dist pulls in @scarf/scarf).
 ENV SCARF_ANALYTICS=false
@@ -30,15 +33,24 @@ RUN npm ci --omit=dev --omit=optional --ignore-scripts && npm cache clean --forc
 # sharp's native image library comes as optional platform packages (@img/*), which the line
 # above drops. The deps stage installed them for this same base image, so copy them over.
 COPY --from=deps /app/node_modules/@img ./node_modules/@img
+# onnxruntime-node bundles every platform's binaries; this image only needs Linux.
+RUN rm -rf node_modules/onnxruntime-node/bin/napi-v*/darwin \
+    node_modules/onnxruntime-node/bin/napi-v*/win32
+
+# ---- model: the food-scan model, downloaded and verified at build time -----
+FROM base AS model
+COPY scripts/fetch-scan-model.mjs ./scripts/
+RUN node scripts/fetch-scan-model.mjs
 
 # ---- production: minimal runtime image -------------------------------------
 FROM base AS production
 ENV NODE_ENV=production
 COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=model --chown=node:node /app/models ./models
 COPY --chown=node:node package.json ./
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/api/health" > /dev/null || exit 1
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
 CMD ["node", "dist/main.js"]

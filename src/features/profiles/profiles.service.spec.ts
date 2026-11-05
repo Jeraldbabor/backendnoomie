@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../database/prisma.service.js';
 import type { ImagesService } from '../images/images.service.js';
 import { ProfilesService } from './profiles.service.js';
-import { profileSelect } from './profiles.types.js';
+import { profileSelect, profileSelectFor } from './profiles.types.js';
 
 const row = {
   id: 'user-1',
@@ -10,7 +10,9 @@ const row = {
   bio: 'Home cook.',
   photo: { id: 'img-1', width: 512, height: 512 },
   createdAt: new Date('2026-01-01'),
-  _count: { recipes: 2 },
+  _count: { recipes: 2, followers: 3, following: 1 },
+  // The viewer's own follow of this user, if any.
+  followers: [] as { id: string }[],
 };
 
 describe('ProfilesService', () => {
@@ -31,7 +33,16 @@ describe('ProfilesService', () => {
     );
   });
 
-  it('returns a public profile with the recipe count', async () => {
+  it("only ever looks up the viewer's own follow", () => {
+    expect(profileSelectFor('viewer-1').followers.where).toEqual({
+      followerId: 'viewer-1',
+    });
+    expect(profileSelectFor(undefined).followers.where.followerId).toBe(
+      '00000000-0000-0000-0000-000000000000',
+    );
+  });
+
+  it('returns a public profile with its counts', async () => {
     prisma.user.findUnique.mockResolvedValue(row);
 
     await expect(service.findOne('user-1')).resolves.toEqual({
@@ -46,10 +57,29 @@ describe('ProfilesService', () => {
       },
       createdAt: row.createdAt,
       recipeCount: 2,
+      followerCount: 3,
+      followingCount: 1,
+      followedByMe: false,
     });
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { id: 'user-1' },
-      select: profileSelect,
+      select: profileSelectFor(undefined),
+    });
+  });
+
+  it('tells a signed-in viewer whether they follow the user', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      ...row,
+      followers: [{ id: 'follow-1' }],
+    });
+
+    const profile = await service.findOne('user-1', 'viewer-1');
+
+    expect(profile.followedByMe).toBe(true);
+    expect(profile).not.toHaveProperty('followers');
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      select: profileSelectFor('viewer-1'),
     });
   });
 
@@ -70,7 +100,7 @@ describe('ProfilesService', () => {
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
         data: { displayName: 'Ada L.', bio: undefined },
-        select: profileSelect,
+        select: profileSelectFor('user-1'),
       });
     });
 

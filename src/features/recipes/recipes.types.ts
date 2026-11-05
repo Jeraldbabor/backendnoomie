@@ -1,3 +1,4 @@
+import { ANONYMOUS_VIEWER } from '../../common/anonymous-viewer.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import {
   imageSelect,
@@ -34,9 +35,6 @@ export const recipeSelect = {
   ...recipeSummarySelect,
   steps: true,
 } satisfies Prisma.RecipeSelect;
-
-// Matches no user (user ids are UUIDv7, never nil), so anonymous viewers have no saves.
-const ANONYMOUS_VIEWER = '00000000-0000-0000-0000-000000000000';
 
 /** Whether `viewerId` saved the recipe. Never reveals who else saved it. */
 const viewerSave = (viewerId: string | undefined) => ({

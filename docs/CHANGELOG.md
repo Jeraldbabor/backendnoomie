@@ -2,6 +2,24 @@
 
 Newest first. **Breaking** entries say what the app must change.
 
+## 2026-11-04: Food scan (not breaking)
+
+- New: `POST /api/v1/scan` (signed in). Upload a photo of food, and get up to 3 recipes with
+  similar photos, each with `similarity` and `confidence` (`strong` or `possible`). The
+  photo isn't stored.
+- A recipe becomes findable as soon as it has a photo, so dishes users invent can be found
+  right away, with no retraining. Recipes without a photo can't be found.
+- Results are suggestions: show them as "similar recipes" with a "None of these" option. See
+  the accuracy numbers in [food scan](api/scan.md#results-are-suggestions-never-facts).
+
+**Setup:** run `docker compose up -d --build` as usual after pulling; your data is kept. The
+first build takes a few minutes longer and downloads an 85 MB model, because the database
+image now includes pgvector and the API image includes the model. Backend developers who use
+`npm run start:dev` need `npm run docker:db` and `npm run scan:model` once.
+
+**What the app can do:** turn on the Scan screen's Continue button. Nothing existing changed.
+Details: [food scan](api/scan.md) and [food scan in the app](app-integration/noomie-app.md#food-scan-in-the-app).
+
 ## 2026-10-26: Local test user seeder (not breaking; tooling only)
 
 - New optional `npm run db:seed:users` creates three local accounts with independently
@@ -9,6 +27,24 @@ Newest first. **Breaking** entries say what the app must change.
 - Refuses production mode. `npm run db:seed` still only loads editorial recipes.
 - Credentials and Docker instructions: [test accounts](setup/local-backend.md#test-accounts-optional-local-development-only).
 - No endpoints, response types, or app integration changes.
+
+## 2026-10-23: Follows and feed (not breaking; one read change to note)
+
+- New: `PUT` and `DELETE /api/v1/profiles/:userId/follow` (signed in). Both are safe to
+  repeat. Following yourself is 400.
+- New: `GET /api/v1/profiles/:userId/followers` and `/following` (anyone), paged, each row
+  with the person's name, photo and `followedByMe`.
+- New: `GET /api/v1/feed` (signed in): recipes by the people you follow, newest first,
+  paged, without steps.
+- Profiles have new fields: `followerCount`, `followingCount` and `followedByMe`.
+- `GET /api/v1/profiles/:userId` now reads the token when one is sent, for `followedByMe`.
+  **An invalid or expired token there now returns 401**; before, it was ignored. Requests
+  without a token are unchanged.
+- Deleting an account removes its follows both ways.
+
+**What the app can do:** add Follow buttons on profiles, follower and following lists, and a
+feed tab. If the app sends a token on profile reads, handle 401 there like elsewhere.
+Details: [follows and feed](api/follows.md).
 
 ## 2026-10-23: Photos (not breaking)
 
