@@ -11,6 +11,7 @@ import { FeedModule } from './features/feed/feed.module.js';
 import { FollowsModule } from './features/follows/follows.module.js';
 import { HealthModule } from './features/health/health.module.js';
 import { ImagesModule } from './features/images/images.module.js';
+import { NutritionModule } from './features/nutrition/nutrition.module.js';
 import { ProfilesModule } from './features/profiles/profiles.module.js';
 import { RecipesModule } from './features/recipes/recipes.module.js';
 import { SavedRecipesModule } from './features/saved-recipes/saved-recipes.module.js';
@@ -35,6 +36,7 @@ import { StorageModule } from './storage/storage.module.js';
     FollowsModule,
     HealthModule,
     ImagesModule,
+    NutritionModule,
     ProfilesModule,
     RecipesModule,
     SavedRecipesModule,

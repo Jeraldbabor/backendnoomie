@@ -54,6 +54,19 @@ the end of this page.
    docker compose run --rm migrate npx prisma db seed
    ```
 
+6. Optional but recommended: load the
+   [starter Filipino dishes](../api/scan-starter-dishes.md), so the food scan recognizes
+   42 common dishes (adobo, lumpia, sinigang…) from the start:
+
+   ```bash
+   docker compose run --rm --build migrate npm run db:seed:dishes
+   ```
+
+   It downloads about 210 small example photos from Wikimedia Commons the first time, which
+   takes several minutes. The photos aren't kept: only their fingerprints are. Running it
+   again only adds what's missing. With Node.js on your computer, it's `npm run db:seed:dishes`
+   (after `npm run scan:model`).
+
 ## Test accounts (optional, local development only)
 
 Create three accounts for sign-in, profiles, saved recipes, and ownership testing:

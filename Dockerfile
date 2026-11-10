@@ -17,11 +17,18 @@ COPY package.json package-lock.json prisma7.config.ts ./
 COPY prisma ./prisma
 RUN npm ci
 
+# ---- model: the food-scan model, downloaded and verified at build time -----
+FROM base AS model
+COPY scripts/fetch-scan-model.mjs ./scripts/
+RUN node scripts/fetch-scan-model.mjs
+
 # ---- build: compile TypeScript; also used by the `migrate` compose service -
 FROM deps AS build
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
 RUN npm run build
+# For `npm run db:seed:dishes` through the migrate service, which fingerprints example photos.
+COPY --from=model /app/models ./models
 
 # ---- prod-deps: runtime dependencies only ----------------------------------
 FROM base AS prod-deps
@@ -36,11 +43,6 @@ COPY --from=deps /app/node_modules/@img ./node_modules/@img
 # onnxruntime-node bundles every platform's binaries; this image only needs Linux.
 RUN rm -rf node_modules/onnxruntime-node/bin/napi-v*/darwin \
     node_modules/onnxruntime-node/bin/napi-v*/win32
-
-# ---- model: the food-scan model, downloaded and verified at build time -----
-FROM base AS model
-COPY scripts/fetch-scan-model.mjs ./scripts/
-RUN node scripts/fetch-scan-model.mjs
 
 # ---- production: minimal runtime image -------------------------------------
 FROM base AS production

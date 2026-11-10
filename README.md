@@ -11,6 +11,7 @@ REST API for the Noomie app.
   (SeaweedFS in Docker locally)
 - Food scan: photo matching with a CLIP image model on `onnxruntime-node` (CPU, no per-scan
   cost) and pgvector
+- Recipe nutrition: estimates from structured ingredients with USDA FoodData Central data
 - Vitest unit and e2e tests, oxlint, Prettier
 
 **Frontend developers:** start with the [API guide in `docs/`](docs/README.md). It covers
@@ -27,7 +28,9 @@ backendnoomie/
 ├── prisma/
 │   ├── schema.prisma          # data models
 │   ├── migrations/            # versioned SQL migrations (commit these)
-│   └── seed.ts                # development seed data
+│   ├── seed.ts                # development seed data
+│   ├── seed-dishes.ts         # starter dishes for the food scan (db:seed:dishes)
+│   └── starter-dishes/        # their recipes and Wikimedia Commons example photos
 ├── prisma7.config.ts          # Prisma CLI config (schema path, migrations, seed, DB URL)
 ├── src/
 │   ├── main.ts                # bootstrap
@@ -47,6 +50,7 @@ backendnoomie/
 │   │   ├── follows/           # follow/unfollow, followers and following lists
 │   │   ├── feed/              # recipes by the people you follow
 │   │   ├── scan/              # food scan: photo fingerprints and matching
+│   │   ├── nutrition/         # recipe nutrition from ingredients and USDA data
 │   │   └── recipes/
 │   │       ├── dto/
 │   │       ├── recipes.controller.ts
@@ -77,6 +81,7 @@ npm run scan:model          # download the food-scan model (about 85 MB, once)
 npm run db:deploy           # apply migrations
 npm run db:seed             # optional sample recipes (safe to re-run; refreshes them)
 npm run db:seed:users        # optional local test accounts (safe to re-run; skips existing)
+npm run db:seed:dishes       # optional starter dishes the food scan knows (needs scan:model)
 npm run start:dev           # API with hot reload on http://localhost:3000
 ```
 
@@ -140,6 +145,7 @@ dependencies only.
 | GET    | `/api/v1/feed`                       | Signed in   | Recipes by the people you follow, newest first               |
 | POST   | `/api/v1/scan`                       | Signed in   | Recipes with similar photos (multipart `photo`)              |
 | POST   | `/api/v1/scan/:scanId/confirm`       | Signed in   | Say which recipe a scan showed; teaches the scan             |
+| GET    | `/api/v1/recipes/:id/nutrition`      | Public      | Nutrition estimated from the recipe's ingredients            |
 
 "Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
 session. "Author only" routes also answer **403** when the recipe belongs to someone else.
@@ -169,6 +175,25 @@ in `scans` for an hour; confirming it copies that into `recipe_fingerprints` as 
 example (no image, with `taught_by_id`), within the caps in `scan.service.ts`. The cut-offs in `scan.service.ts`
 come from a test on real photos, summarized in [docs/api/scan.md](docs/api/scan.md). The API
 boots without the model file; only scanning is affected (503).
+
+Starter dishes (`prisma/starter-dishes/`, loaded by `npm run db:seed:dishes`) are editorial
+recipes with example photos from Wikimedia Commons (open licenses only). The seed downloads
+each photo once and stores only its fingerprint, with `example_file` and `example_credit`
+(the third kind of `recipe_fingerprints` row, next to recipe photos and taught examples). To
+add a dish, add its recipe to `recipes.ts` and its photos to `example-photos.json`, credit
+them in `docs/api/scan-starter-dishes.md` (`starter-dishes.spec.ts` checks all three
+agree), and run the seed. The Docker `migrate` image includes the model for this.
+
+Recipe nutrition (`features/nutrition`) is computed on every request, never stored. The
+food table `usda-foods.ts` is generated: edit the reviewed list in
+`scripts/nutrition/foods.mjs` (USDA food ids, names, portion sizes) and run
+`npm run nutrition:build -- <folder>` with the USDA FoodData Central SR Legacy CSV download
+(public domain), then commit both. The script fails on any food or portion that isn't in the
+data. Ingredient names match foods by `ingredient_match_key` too: the service asks the
+database for the keys of every food name once, on first use. A name matches the longest food
+name it contains when its other words only describe the food (`DESCRIBING_PHRASES`), so
+"coconut flour" isn't counted as flour. The unit and e2e tests fail when two foods' names get
+the same key.
 
 Discover matches ingredients on `recipe_ingredients.match_key`, which the **database** fills:
 the SQL function `ingredient_match_key(name)` (case, accents, punctuation, plural endings)
@@ -242,20 +267,22 @@ Then add the models to `schema.prisma`, run a migration, and register the module
 
 ## Scripts
 
-| Script                  | What it does                                               |
-| ----------------------- | ---------------------------------------------------------- |
-| `npm run start:dev`     | Watch mode                                                 |
-| `npm run build`         | Compile to `dist/`                                         |
-| `npm run start:prod`    | Run the compiled build                                     |
-| `npm test`              | Unit tests (`src/**/*.spec.ts`)                            |
-| `npm run test:e2e`      | e2e tests against the database in `DATABASE_URL`           |
-| `npm run docs:check`    | Checks `docs/` covers every route and all links resolve    |
-| `npm run scan:model`    | Download and verify the food-scan model                    |
-| `npm run lint`          | oxlint (type-aware)                                        |
-| `npm run format`        | Prettier                                                   |
-| `npm run db:seed:users` | Add missing local test accounts (never resets passwords)   |
-| `npm run db:*`          | Prisma generate / migrate / deploy / seed / reset / studio |
-| `npm run docker:*`      | `db` (database and storage), `up`, `down`                  |
+| Script                    | What it does                                               |
+| ------------------------- | ---------------------------------------------------------- |
+| `npm run start:dev`       | Watch mode                                                 |
+| `npm run build`           | Compile to `dist/`                                         |
+| `npm run start:prod`      | Run the compiled build                                     |
+| `npm test`                | Unit tests (`src/**/*.spec.ts`)                            |
+| `npm run test:e2e`        | e2e tests against the database in `DATABASE_URL`           |
+| `npm run docs:check`      | Checks `docs/` covers every route and all links resolve    |
+| `npm run scan:model`      | Download and verify the food-scan model                    |
+| `npm run nutrition:build` | Rebuild the nutrition food table from USDA files           |
+| `npm run lint`            | oxlint (type-aware)                                        |
+| `npm run format`          | Prettier                                                   |
+| `npm run db:seed:users`   | Add missing local test accounts (never resets passwords)   |
+| `npm run db:seed:dishes`  | Load the starter dishes and their scan example photos      |
+| `npm run db:*`            | Prisma generate / migrate / deploy / seed / reset / studio |
+| `npm run docker:*`        | `db` (database and storage), `up`, `down`                  |
 
 ## Continuous integration
 

@@ -2,6 +2,35 @@
 
 Newest first. **Breaking** entries say what the app must change.
 
+## 2026-11-10: Starter dishes for the food scan (not breaking)
+
+- New optional `npm run db:seed:dishes` loads 42 common Filipino dishes (adobo, lumpia,
+  sinigang, kare-kare…) as Noomie editorial recipes, each with about 5 example photos from
+  Wikimedia Commons, so the scan finds them without anyone posting a photo first.
+- Scan results can now be these recipes. Like the sample recipes, they have
+  `author: null`, and they have no photo of their own (`photo: null`): show a placeholder.
+  Nutrition works for them, since their ingredients have amounts.
+- No endpoint, field or rule changed. List, accuracy and photo credits:
+  [starter dishes](api/scan-starter-dishes.md).
+
+**Setup:** after pulling, run `docker compose up -d --build` as usual (it applies a small
+migration), then `docker compose run --rm --build migrate npm run db:seed:dishes` once.
+
+## 2026-11-10: Recipe nutrition (not breaking)
+
+- New: `GET /api/v1/recipes/:id/nutrition` (anyone). Calories, protein, fat, saturated fat,
+  carbs, fiber, sugars and sodium for the whole recipe and per serving, % Daily Value, and
+  highlights such as "High in protein", estimated from the recipe's ingredients with USDA
+  FoodData Central data.
+- Each ingredient shows the USDA food it was counted as and its weight, or why it wasn't
+  counted (no amount, unknown food, or a unit with no known weight).
+- Knows about 190 common ingredients by their English and Filipino names (bawang, toyo,
+  patis, kangkong, malunggay…). Nothing about recipes changed.
+
+**What the app can do:** show a nutrition section on the recipe screen, including after a
+food scan. Details: [recipe nutrition](api/nutrition.md) and
+[nutrition in the app](app-integration/noomie-app.md#nutrition-in-the-app).
+
 ## 2026-11-10: Teach the scan (not breaking)
 
 - New: `POST /api/v1/scan/:scanId/confirm` with `{ recipeId }` (signed in). Saves the scan's

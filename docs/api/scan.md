@@ -8,6 +8,10 @@ its recipe has a photo**, with no retraining.
 Users can also **teach the scan**: after a scan, saying which recipe it was makes that dish
 easier to find next time.
 
+To show **what's in** the dish the user picks (ingredients, calories, nutrients and
+highlights such as "High in protein"), get its [recipe nutrition](nutrition.md). The scan
+itself only compares photos; it doesn't look for ingredients in the photo.
+
 Signed-in users only. The scanned photo isn't stored. Its fingerprint (a list of 512 numbers,
 not the photo) is kept for an hour, so the user can confirm which recipe it was.
 
@@ -79,12 +83,17 @@ Returns **200**, usually in under a second:
 ## How it finds new dishes
 
 A dish is found by its examples: its recipe photo, plus any photos users taught it (see
-below). Every recipe photo gets a fingerprint when it's uploaded with
+below), plus, for the [starter dishes](scan-starter-dishes.md), example photos loaded with
+`npm run db:seed:dishes`. Every recipe photo gets a fingerprint when it's uploaded with
 [`PUT /api/v1/recipes/:id/photo`](photos.md#upload-a-photo). A scan compares the photo's
 fingerprint with all of them.
 
-- **Only recipes with a photo can be found.** A recipe without one is invisible to the scan,
-  and that includes the three sample recipes.
+- **Only recipes with examples can be found.** A recipe without a photo, a taught example,
+  or starter example photos is invisible to the scan; that includes the three sample recipes.
+- **Starter dishes come with the backend.** 42 common Filipino dishes are Noomie editorial
+  recipes (`author: null`) with about 5 example photos each, so the scan knows them from the
+  start. Their recipes have no photo of their own (`photo: null`). See
+  [starter dishes](scan-starter-dishes.md) for the list and how well it works.
 - Replacing a photo replaces its fingerprint. Removing the photo or deleting the recipe
   removes the dish from the scan.
 - If a photo couldn't be fingerprinted, the upload still succeeds; the recipe just can't be

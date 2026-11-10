@@ -232,6 +232,32 @@ whose Continue button is disabled until an analysis endpoint exists.
 - **Allow more time.** A scan usually takes under a second, plus the upload. Pass a longer
   `timeoutMs` than the default 15 seconds, and let the user cancel.
 
+## Nutrition in the app
+
+[Recipe nutrition](../api/nutrition.md) belongs on the recipe screen, and after a food scan,
+on the recipe the user picks. Add it to `src/features/recipes/api.ts`:
+
+```ts
+export const nutritionApi = {
+  forRecipe: (recipeId: string) =>
+    apiRequest<RecipeNutrition>(`/recipes/${recipeId}/nutrition`),
+};
+```
+
+- **No token needed.** Anyone can read it, and signing in changes nothing.
+- **Load it after the recipe,** and let the recipe show while it loads. It's computed on
+  every request, so refetch after the user edits the recipe instead of keeping an old copy.
+- **Show estimates as estimates:** "About 582 kcal per serving". When `coverage.complete`
+  is `false`, add "Based on 6 of 9 ingredients" and list the ingredients not counted.
+  Show `incompleteNutrients` as "at least" values.
+- **Highlights** come with a ready-to-show `label` ("High in protein"). Show them as facts;
+  don't add health claims.
+- **Show the working:** the per-ingredient `food` and `grams` let users check what each line
+  was counted as ("chicken thighs → 1000 g Chicken, thigh, meat and skin, raw").
+- **Credit the source:** "Source: USDA FoodData Central" near the numbers.
+- **Help authors get it right:** an `unknown_unit` ingredient counts once it has a weight
+  (`g`), and `no_amount` once it has a quantity.
+
 ## Follows and the feed in the app
 
 The [follows and feed API](../api/follows.md), in `src/features/follows/api.ts`:

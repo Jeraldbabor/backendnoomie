@@ -20,6 +20,8 @@ read the backend code. Examples are based on real API responses.
 | Follow people, list followers, show the feed         | [Follows and feed](api/follows.md)                                                 |
 | Find recipes from a photo of food                    | [Food scan](api/scan.md)                                                           |
 | Let users teach the scan which recipe a photo shows  | [Teach the scan](api/scan.md#teach-the-scan-post-apiv1scanscanidconfirm-signed-in) |
+| Show a recipe's calories, nutrients, and highlights  | [Recipe nutrition](api/nutrition.md)                                               |
+| See which dishes the scan knows from the start       | [Starter dishes](api/scan-starter-dishes.md)                                       |
 | Call the API from the Noomie app's code              | [Noomie app integration](app-integration/noomie-app.md)                            |
 | Ask for a new endpoint, or report a bug              | [Working together](team/working-together.md)                                       |
 | See what changed in the API                          | [Changelog](CHANGELOG.md)                                                          |
@@ -45,6 +47,8 @@ docs/
 │   ├── photos.md
 │   ├── follows.md
 │   ├── scan.md
+│   ├── scan-starter-dishes.md
+│   ├── nutrition.md
 │   └── _template.md          template for documenting a new feature
 ├── app-integration/          how the Noomie app's code should call the API
 │   └── noomie-app.md
@@ -92,6 +96,7 @@ docs/
 | GET    | `/api/v1/feed`                       | Signed in   | [Follows and feed](api/follows.md)             |
 | POST   | `/api/v1/scan`                       | Signed in   | [Food scan](api/scan.md)                       |
 | POST   | `/api/v1/scan/:scanId/confirm`       | Signed in   | [Food scan](api/scan.md)                       |
+| GET    | `/api/v1/recipes/:id/nutrition`      | Anyone      | [Recipe nutrition](api/nutrition.md)           |
 | DELETE | `/api/v1/saved-recipes/:recipeId`    | Signed in   | [Saved recipes](api/saved-recipes.md)          |
 
 Locally the API runs at `http://localhost:3000`.

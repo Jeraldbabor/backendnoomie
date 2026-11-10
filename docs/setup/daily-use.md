@@ -12,6 +12,7 @@ Run these in the `backendnoomie` folder. First-time setup is in [run the backend
 | See the API logs                        | `docker compose logs -f api`                                                            |
 | Load or refresh the sample recipes      | `docker compose run --rm migrate npx prisma db seed`                                    |
 | Add missing local test accounts         | `docker compose run --rm --build -e NODE_ENV=development migrate npm run db:seed:users` |
+| Load or refresh the starter dishes      | `docker compose run --rm --build migrate npm run db:seed:dishes`                        |
 | Wipe your local database and start over | `docker compose down -v`, then `docker compose up -d`                                   |
 
 `docker compose down -v` deletes all accounts, recipes and photos **on your computer only**.
