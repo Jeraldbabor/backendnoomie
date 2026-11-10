@@ -15,27 +15,30 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(uuid(7)) @db.Uuid
+  id                 String              @id @default(uuid(7)) @db.Uuid
   /// Stored lowercased and trimmed, so uniqueness is case-insensitive.
-  email        String        @unique @db.VarChar(254)
-  displayName  String        @map("display_name") @db.VarChar(50)
+  email              String              @unique @db.VarChar(254)
+  displayName        String              @map("display_name") @db.VarChar(50)
   /// Public profile text; null when the user hasn't written one.
-  bio          String?       @db.VarChar(160)
+  bio                String?             @db.VarChar(160)
   /// scrypt hash with its parameters; never returned by the API.
-  passwordHash String        @map("password_hash")
+  passwordHash       String              @map("password_hash")
   /// Public profile photo; null when none.
-  photoId      String?       @unique @map("photo_id") @db.Uuid
-  photo        Image?        @relation("UserPhoto", fields: [photoId], references: [id], onDelete: SetNull)
-  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  sessions     Session[]
-  recipes      Recipe[]
-  savedRecipes SavedRecipe[]
-  images       Image[]       @relation("ImageOwner")
+  photoId            String?             @unique @map("photo_id") @db.Uuid
+  photo              Image?              @relation("UserPhoto", fields: [photoId], references: [id], onDelete: SetNull)
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions           Session[]
+  recipes            Recipe[]
+  savedRecipes       SavedRecipe[]
+  images             Image[]             @relation("ImageOwner")
   /// Follows where this user is the follower (who they follow).
-  following    Follow[]      @relation("FollowFollower")
+  following          Follow[]            @relation("FollowFollower")
   /// Follows where this user is followed (their followers).
-  followers    Follow[]      @relation("FollowFollowed")
+  followers          Follow[]            @relation("FollowFollowed")
+  scans              Scan[]
+  /// Examples this user taught the food scan by confirming scans.
+  taughtFingerprints RecipeFingerprint[] @relation("TaughtFingerprints")
 
   @@map("users")
 }
@@ -60,22 +63,45 @@ model Image {
   @@map("images")
 }
 
-/// What the food scan compares photos against: one fingerprint for each recipe photo. A new
-/// recipe photo becomes findable as soon as this row exists; no model training is involved.
-/// Goes with its image (replacing or removing a photo) and its recipe.
+/// What the food scan compares photos against. A row is either a recipe photo's fingerprint
+/// (`imageId`) or an example a user taught by confirming a scan (`taughtById` and `scanId`),
+/// never both (check constraint recipe_fingerprints_one_source). A dish is findable as soon as
+/// it has a row; no model training is involved. Rows go with their image, recipe, or teacher.
 model RecipeFingerprint {
-  id        String                     @id @default(uuid(7)) @db.Uuid
-  recipeId  String                     @map("recipe_id") @db.Uuid
-  recipe    Recipe                     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  imageId   String                     @unique @map("image_id") @db.Uuid
-  image     Image                      @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  id         String                     @id @default(uuid(7)) @db.Uuid
+  recipeId   String                     @map("recipe_id") @db.Uuid
+  recipe     Recipe                     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  imageId    String?                    @unique @map("image_id") @db.Uuid
+  image      Image?                     @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  taughtById String?                    @map("taught_by_id") @db.Uuid
+  taughtBy   User?                      @relation("TaughtFingerprints", fields: [taughtById], references: [id], onDelete: Cascade)
+  /// The confirmed scan, so confirming it again adds nothing. Not a foreign key: scans expire.
+  scanId     String?                    @unique @map("scan_id") @db.Uuid
   /// Unit-length CLIP image embedding (pgvector). Prisma can't read or write this type, so
   /// ScanService uses raw SQL for it.
-  embedding Unsupported("vector(512)")
-  createdAt DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  embedding  Unsupported("vector(512)")
+  createdAt  DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([recipeId])
+  @@index([taughtById])
   @@map("recipe_fingerprints")
+}
+
+/// A recent scan's fingerprint, kept for an hour so its user can say which recipe it was.
+/// The scanned photo itself is never stored. Older rows are deleted as new scans arrive.
+model Scan {
+  id               String                     @id @default(uuid(7)) @db.Uuid
+  userId           String                     @map("user_id") @db.Uuid
+  user             User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  embedding        Unsupported("vector(512)")
+  /// The recipes this scan offered. Anyone may confirm one of these; any other recipe only
+  /// its author may confirm.
+  matchedRecipeIds String[]                   @map("matched_recipe_ids") @db.Uuid
+  createdAt        DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("scans")
 }
 
 /// One signed-in device. The client holds a random token; only its SHA-256 hash is stored.

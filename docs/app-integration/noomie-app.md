@@ -223,6 +223,12 @@ whose Continue button is disabled until an analysis endpoint exists.
 - **Show suggestions, not answers:** "Looks like" for `strong`, "Could be" for `possible`, and
   always a "None of these" action.
 - **Empty `matches`** is a normal result. Offer search, or "Add this as your own recipe".
+- **Teach it:** when the user taps a match, confirm it with
+  `POST /scan/{scanId}/confirm` and `{ recipeId }` (JSON, so `apiRequest()` works). Do it in the
+  background; a failure doesn't need to bother the user.
+- **Authors:** on their own recipe, offer "Add another photo for the scan": scan a photo, then
+  confirm it as that recipe. This is what makes a dish the scan doesn't find yet findable.
+- **Keep `scanId` only for the screen.** It expires after an hour; a 404 then means "scan again".
 - **Allow more time.** A scan usually takes under a second, plus the upload. Pass a longer
   `timeoutMs` than the default 15 seconds, and let the user cancel.
 

@@ -5,23 +5,24 @@ read the backend code. Examples are based on real API responses.
 
 ## Find what you need
 
-| I want to…                                           | Read                                                       |
-| ---------------------------------------------------- | ---------------------------------------------------------- |
-| Run the backend on my computer for the first time    | [Run the backend](setup/local-backend.md)                  |
-| Start, stop, update, or fix the local backend        | [Daily use and troubleshooting](setup/daily-use.md)        |
-| Understand errors, paging, limits, and field rules   | [API conventions](api/conventions.md)                      |
-| Sign users up, in, and out                           | [Authentication](api/authentication.md)                    |
-| Change password, sign out everywhere, delete account | [Account settings](api/authentication.md#account-settings) |
-| Show, create, edit, or delete recipes                | [Recipes](api/recipes.md)                                  |
-| Show a user's profile, or let users edit their own   | [Profiles](api/profiles.md)                                |
-| Let users save recipes and see their saved list      | [Saved recipes](api/saved-recipes.md)                      |
-| Find recipes from the ingredients a user has         | [Discover](api/discover.md)                                |
-| Add, show, or remove recipe and profile photos       | [Photos](api/photos.md)                                    |
-| Follow people, list followers, show the feed         | [Follows and feed](api/follows.md)                         |
-| Find recipes from a photo of food                    | [Food scan](api/scan.md)                                   |
-| Call the API from the Noomie app's code              | [Noomie app integration](app-integration/noomie-app.md)    |
-| Ask for a new endpoint, or report a bug              | [Working together](team/working-together.md)               |
-| See what changed in the API                          | [Changelog](CHANGELOG.md)                                  |
+| I want to…                                           | Read                                                                               |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Run the backend on my computer for the first time    | [Run the backend](setup/local-backend.md)                                          |
+| Start, stop, update, or fix the local backend        | [Daily use and troubleshooting](setup/daily-use.md)                                |
+| Understand errors, paging, limits, and field rules   | [API conventions](api/conventions.md)                                              |
+| Sign users up, in, and out                           | [Authentication](api/authentication.md)                                            |
+| Change password, sign out everywhere, delete account | [Account settings](api/authentication.md#account-settings)                         |
+| Show, create, edit, or delete recipes                | [Recipes](api/recipes.md)                                                          |
+| Show a user's profile, or let users edit their own   | [Profiles](api/profiles.md)                                                        |
+| Let users save recipes and see their saved list      | [Saved recipes](api/saved-recipes.md)                                              |
+| Find recipes from the ingredients a user has         | [Discover](api/discover.md)                                                        |
+| Add, show, or remove recipe and profile photos       | [Photos](api/photos.md)                                                            |
+| Follow people, list followers, show the feed         | [Follows and feed](api/follows.md)                                                 |
+| Find recipes from a photo of food                    | [Food scan](api/scan.md)                                                           |
+| Let users teach the scan which recipe a photo shows  | [Teach the scan](api/scan.md#teach-the-scan-post-apiv1scanscanidconfirm-signed-in) |
+| Call the API from the Noomie app's code              | [Noomie app integration](app-integration/noomie-app.md)                            |
+| Ask for a new endpoint, or report a bug              | [Working together](team/working-together.md)                                       |
+| See what changed in the API                          | [Changelog](CHANGELOG.md)                                                          |
 
 New to the project? Read them top to bottom once.
 
@@ -90,6 +91,7 @@ docs/
 | GET    | `/api/v1/profiles/:userId/following` | Anyone      | [Follows and feed](api/follows.md)             |
 | GET    | `/api/v1/feed`                       | Signed in   | [Follows and feed](api/follows.md)             |
 | POST   | `/api/v1/scan`                       | Signed in   | [Food scan](api/scan.md)                       |
+| POST   | `/api/v1/scan/:scanId/confirm`       | Signed in   | [Food scan](api/scan.md)                       |
 | DELETE | `/api/v1/saved-recipes/:recipeId`    | Signed in   | [Saved recipes](api/saved-recipes.md)          |
 
 Locally the API runs at `http://localhost:3000`.

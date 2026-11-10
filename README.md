@@ -139,6 +139,7 @@ dependencies only.
 | GET    | `/api/v1/profiles/:userId/following` | Public      | Who the user follows, newest first                           |
 | GET    | `/api/v1/feed`                       | Signed in   | Recipes by the people you follow, newest first               |
 | POST   | `/api/v1/scan`                       | Signed in   | Recipes with similar photos (multipart `photo`)              |
+| POST   | `/api/v1/scan/:scanId/confirm`       | Signed in   | Say which recipe a scan showed; teaches the scan             |
 
 "Signed in" routes need `Authorization: Bearer <token>` and answer **401** without a valid
 session. "Author only" routes also answer **403** when the recipe belongs to someone else.
@@ -163,7 +164,9 @@ so dishes users invent need no retraining. `PhotoFingerprintService` runs a CLIP
 on the CPU, turning a photo into 512 numbers; `recipe_fingerprints` keeps one row per recipe
 photo (pgvector, written with raw SQL because Prisma can't handle that type). A photo is
 fingerprinted right after upload, and rows go with their image or recipe. A scan is a nearest
-match over every row; add an index if that ever gets slow. The cut-offs in `scan.service.ts`
+match over every row; add an index if that ever gets slow. A scan keeps its fingerprint
+in `scans` for an hour; confirming it copies that into `recipe_fingerprints` as a taught
+example (no image, with `taught_by_id`), within the caps in `scan.service.ts`. The cut-offs in `scan.service.ts`
 come from a test on real photos, summarized in [docs/api/scan.md](docs/api/scan.md). The API
 boots without the model file; only scanning is affected (503).
 

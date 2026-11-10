@@ -5,15 +5,20 @@ first, for the user to choose from. It works by comparing photos, so it knows ev
 someone has posted a photo of. **A brand-new dish a user invents can be found as soon as
 its recipe has a photo**, with no retraining.
 
-Signed-in users only. The scanned photo isn't stored.
+Users can also **teach the scan**: after a scan, saying which recipe it was makes that dish
+easier to find next time.
+
+Signed-in users only. The scanned photo isn't stored. Its fingerprint (a list of 512 numbers,
+not the photo) is kept for an hour, so the user can confirm which recipe it was.
 
 How to call it from the Noomie app: [app integration](../app-integration/noomie-app.md#food-scan-in-the-app).
 
 ## Endpoints
 
-| Method | Path           | Who       | Success |
-| ------ | -------------- | --------- | ------- |
-| POST   | `/api/v1/scan` | Signed in | 200     |
+| Method | Path                           | Who       | Success |
+| ------ | ------------------------------ | --------- | ------- |
+| POST   | `/api/v1/scan`                 | Signed in | 200     |
+| POST   | `/api/v1/scan/:scanId/confirm` | Signed in | 204     |
 
 ## Scan a photo: `POST /api/v1/scan` (signed in)
 
@@ -25,40 +30,43 @@ Returns **200**, usually in under a second:
 
 ```json
 {
+  "scanId": "01a1c302-4403-7c1c-baf8-98a7d4ad9427",
   "matches": [
     {
       "recipe": {
-        "id": "01a1a40a-bb2f-769e-8249-bad8d9b9f210",
-        "title": "Lola's chicken adobo",
+        "id": "01a1c302-3f85-764b-860c-74c7aa1af3bf",
+        "title": "Beignets",
         "description": null,
-        "cuisine": "Filipino",
-        "minutes": 45,
-        "servings": 4,
+        "cuisine": "French",
+        "minutes": 40,
+        "servings": 6,
         "ingredients": [
-          { "name": "chicken", "quantity": 1, "unit": "kg", "note": null }
+          { "name": "flour", "quantity": 500, "unit": "g", "note": null }
         ],
-        "createdAt": "2026-11-04T00:52:09.135Z",
-        "updatedAt": "2026-11-04T00:52:11.074Z",
+        "createdAt": "2026-11-10T01:11:06.885Z",
+        "updatedAt": "2026-11-10T01:11:06.963Z",
         "photo": {
-          "small": "/api/v1/images/01a1a40a-c15c-73c8-8378-556184f6ea88/small",
-          "large": "/api/v1/images/01a1a40a-c15c-73c8-8378-556184f6ea88/large",
-          "width": 1200,
-          "height": 1600
+          "small": "/api/v1/images/01a1c302-3fc2-7331-8601-58ca7e1ed8f6/small",
+          "large": "/api/v1/images/01a1c302-3fc2-7331-8601-58ca7e1ed8f6/large",
+          "width": 512,
+          "height": 512
         },
         "author": {
-          "id": "01a1a40a-b8e7-717f-8ce4-b03904eeeecd",
+          "id": "01a1c302-3e9b-76cd-84b0-cb227dd24762",
           "displayName": "Ada",
           "photo": null
         },
         "savedByMe": false
       },
-      "similarity": 0.94,
+      "similarity": 0.86,
       "confidence": "strong"
     }
   ]
 }
 ```
 
+- **`scanId`** identifies this scan for [teaching](#teach-the-scan-post-apiv1scanscanidconfirm-signed-in).
+  It works for an hour, and only for the user who scanned.
 - **`matches`** has up to 3 recipes, closest first. `[]` means nothing looks similar enough;
   that's a normal result with **200**, not an error.
 - **`recipe`** is a recipe as in other lists: the [recipe object](recipes.md#the-recipe-object)
@@ -70,7 +78,8 @@ Returns **200**, usually in under a second:
 
 ## How it finds new dishes
 
-Every recipe photo gets a fingerprint when it's uploaded with
+A dish is found by its examples: its recipe photo, plus any photos users taught it (see
+below). Every recipe photo gets a fingerprint when it's uploaded with
 [`PUT /api/v1/recipes/:id/photo`](photos.md#upload-a-photo). A scan compares the photo's
 fingerprint with all of them.
 
@@ -80,6 +89,44 @@ fingerprint with all of them.
   removes the dish from the scan.
 - If a photo couldn't be fingerprinted, the upload still succeeds; the recipe just can't be
   found by the scan.
+
+## Teach the scan: `POST /api/v1/scan/:scanId/confirm` (signed in)
+
+Tells the scan which recipe a recent scan showed. The scan's fingerprint is saved as one more
+example of that recipe, so similar photos find it more easily, for everyone. There's no
+retraining: it works on the next scan.
+
+```json
+{ "recipeId": "01a1c302-3f85-764b-860c-74c7aa1af3bf" }
+```
+
+Returns **204** with no body. Sending the same confirmation again also returns **204** and
+changes nothing, so a retry is safe.
+
+**Which recipes can be confirmed:**
+
+- **One of this scan's `matches`**, by anyone. This is the "Which one is it?" step.
+- **Any recipe of your own**, even one the scan didn't offer. This is how authors teach their
+  own dish more photos, which matters most when the scan doesn't find it at all yet.
+- Nothing else. Users can't attach their photos to someone else's recipe that the scan didn't
+  suggest. That keeps people from pushing unrelated photos onto other people's dishes.
+
+**Limits:** a scan can be confirmed only by the user who scanned, within an hour, and as one
+recipe. Each user keeps their newest 3 examples per recipe, and each recipe keeps its newest
+20 taught examples. Older ones are replaced. Recipe photos don't count toward either limit.
+
+**What it does, measured on 8 real photos of beignets.** The recipe had 1 photo, then its
+author taught it 3 more. Another user scanned the same 4 new photos before and after:
+
+| Photo | Before   | After    |
+| ----- | -------- | -------- |
+| 1     | 0.79     | **0.86** |
+| 2     | 0.75     | 0.76     |
+| 3     | no match | **0.86** |
+| 4     | no match | **0.85** |
+
+**Privacy:** a taught example is a fingerprint, never the photo. Examples are deleted with the
+recipe, and with the account of the user who taught them.
 
 ## Results are suggestions, never facts
 
@@ -115,6 +162,19 @@ for the "None of these" option.
 | 429    | More than 20 scans in a minute                   | `ThrottlerException: Too Many Requests`                       |
 | 503    | The food-scan model isn't available              | `Food scan is not available right now`                        |
 
+Confirming a scan:
+
+| Status | When                                                     | Message                                                               |
+| ------ | -------------------------------------------------------- | --------------------------------------------------------------------- |
+| 404    | Unknown scan, someone else's scan, or older than an hour | `Scan not found or expired`                                           |
+| 404    | The recipe doesn't exist                                 | `Recipe <id> not found`                                               |
+| 403    | Someone else's recipe that the scan didn't offer         | `You can confirm one of this scan's matches, or a recipe of your own` |
+| 409    | This scan was already confirmed as another recipe        | `This scan was already confirmed as another recipe`                   |
+| 400    | `recipeId` isn't a UUID                                  | `recipeId must be a UUID` (in a list)                                 |
+| 401    | Not signed in                                            | `Sign in to continue`                                                 |
+
+The 403 and 409 messages are user-friendly. On a 404 for the scan, ask the user to scan again.
+
 The format, size and 503 messages are user-friendly. The "field named photo" message is for
 developers. On a 503, keep the photo and offer to try again.
 
@@ -126,5 +186,6 @@ type ScanMatch = {
   similarity: number;
   confidence: 'strong' | 'possible';
 };
-type ScanResult = { matches: ScanMatch[] };
+type ScanResult = { scanId: string; matches: ScanMatch[] };
+type ConfirmScan = { recipeId: string };
 ```

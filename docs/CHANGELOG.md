@@ -2,6 +2,21 @@
 
 Newest first. **Breaking** entries say what the app must change.
 
+## 2026-11-10: Teach the scan (not breaking)
+
+- New: `POST /api/v1/scan/:scanId/confirm` with `{ recipeId }` (signed in). Saves the scan's
+  fingerprint as one more example of that recipe, so similar photos find it more easily for
+  everyone, with no retraining. Safe to repeat.
+- Scan results have a new field, `scanId`. It can be confirmed for an hour, by the user who
+  scanned, as one of its `matches` or as one of the user's own recipes.
+- The scanned photo is still never stored; its fingerprint is now kept for an hour.
+- A match's `confidence` now follows the rounded `similarity` it shows, so 0.849 is shown
+  as 0.85 and `strong`. Before, it could show 0.85 with `possible`.
+
+**What the app can do:** after a scan, ask "Which one is it?" and confirm the user's pick.
+Let authors add photos to their own recipe this way. Details:
+[teach the scan](api/scan.md#teach-the-scan-post-apiv1scanscanidconfirm-signed-in).
+
 ## 2026-11-04: Food scan (not breaking)
 
 - New: `POST /api/v1/scan` (signed in). Upload a photo of food, and get up to 3 recipes with

@@ -10,7 +10,9 @@ export interface ScanMatch {
   confidence: MatchConfidence;
 }
 
-/** Closest first. Empty when nothing looks similar enough. */
 export interface ScanResult {
+  /** Pass to the confirm endpoint, within an hour, to say which recipe it was. */
+  scanId: string;
+  /** Closest first. Empty when nothing looks similar enough. */
   matches: ScanMatch[];
 }
